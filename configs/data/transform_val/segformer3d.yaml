@@ -1,0 +1,6 @@
+_target_: monai.transforms.Compose
+
+transforms:
+  - _target_: monai.transforms.EnsureTyped
+    keys: ["image", "label"]
+    track_meta: False

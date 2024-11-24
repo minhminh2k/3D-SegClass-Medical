@@ -9,18 +9,7 @@ from torchmetrics import F1Score
 from src.models.losses.dice_loss import DiceLoss
 from src.models.losses.focal_loss import FocalLoss
 from src.models.losses.iou_loss import IoULoss
-
 import torch.nn.functional as F
-
-def lr_lambda(step, warmup_steps, steps, decay_factor):
-    if step < warmup_steps:
-        return step / warmup_steps
-    elif step < steps[0]:
-        return 1.0
-    elif step < steps[1]:
-        return 1 / decay_factor
-    else:
-        return 1 / (decay_factor**2)
 
 class SegFormer3DLitModule(LightningModule):
     """Example of a `LightningModule` for Fine-tuning SAM.
