@@ -1,0 +1,4 @@
+_target_: monai.losses.DiceLoss
+
+to_onehot_y: False
+sigmoid: True

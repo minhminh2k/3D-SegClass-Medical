@@ -5,19 +5,19 @@ from lightning import LightningModule
 from torchmetrics import MaxMetric, MeanMetric
 from torchmetrics.classification.accuracy import Accuracy
 from torchmetrics import Dice, JaccardIndex, MaxMetric, MeanMetric
-from torchmetrics import F1Score
-from src.models.losses.dice_loss import DiceLoss
-from src.models.losses.focal_loss import FocalLoss
-from src.models.losses.iou_loss import IoULoss
-import torch.nn.functional as F
-from monai import transforms
+from monai.inferers import sliding_window_inference
 from monai.transforms import (
     AsDiscrete,
     Activations,
-    LoadImaged
+    CropForegroundd,
+    RandSpatialCropd,
+    RandFlipd,
+    RandScaleIntensityd
 )
-from monai.data import Dataset
-from monai.data import decollate_batch
+from monai.metrics import DiceMetric
+from monai.utils.enums import MetricReduction
+from functools import partial
+
 
 class SwinUNETRModule(LightningModule):
     """Example of a `LightningModule` for Fine-tuning SAM.
@@ -57,13 +57,14 @@ class SwinUNETRModule(LightningModule):
         net: torch.nn.Module,
         optimizer: torch.optim.Optimizer,
         scheduler: torch.optim.lr_scheduler,
-        criterion_1: torch.nn.Module,
-        criterion_2: torch.nn.Module,
-        criterion_3: torch.nn.Module,
+        criterion: torch.nn.Module,
         compile: bool,
         warmup_steps: int,
         steps: Tuple[int, int],
         decay_factor: int,
+        roi_size: Tuple[int, int, int] = [128, 128, 128],
+        sw_batch_size: int = 4,
+        infer_overlap: float = 0.5
     ) -> None:
         """Initialize a `MNISTLitModule`.
 
@@ -75,69 +76,57 @@ class SwinUNETRModule(LightningModule):
 
         # this line allows to access init params with 'self.hparams' attribute
         # also ensures init params will be stored in ckpt
-        self.save_hyperparameters(logger=False, ignore=["net", "criterion_1", "criterion_2", "criterion_3"])
+        self.save_hyperparameters(logger=False, ignore=["net", "criterion"])
 
         self.net = net
 
         # loss function
-        self.criterion_1 = criterion_1
-        self.criterion_2 = criterion_2
-        self.criterion_3 = criterion_3
+        self.criterion = criterion
+        
+        # Post processing
+        self.post_sigmoid = Activations(sigmoid=True)
+        self.post_pred = AsDiscrete(argmax=False, threshold=0.5)
+        
+        self.model_inferer = partial(
+            sliding_window_inference,
+            roi_size=[self.hparams.roi_size[0], self.hparams.roi_size[1], self.hparams.roi_size[2]],
+            sw_batch_size=self.hparams.sw_batch_size,
+            predictor=self.hparams.net,
+            overlap=self.hparams.infer_overlap,
+        )
         
         # metric objects for calculating and averaging accuracy across batches
-        self.train_metric_1 = JaccardIndex(task="binary", threshold=0.5, num_classes=2, average="micro")
-        self.val_metric_1 = JaccardIndex(task="binary", threshold=0.5, num_classes=2, average="micro")
-        self.test_metric_1 = JaccardIndex(task="binary", threshold=0.5, num_classes=2, average="micro")
-        
-        self.train_metric_2 = F1Score(task="binary", threshold=0.5, average='micro', num_classes=2)
-        self.val_metric_2 = F1Score(task="binary", threshold=0.5, average='micro', num_classes=2)
-        self.test_metric_2 = F1Score(task="binary", threshold=0.5, average='micro', num_classes=2)
+        self.train_metric = DiceMetric(include_background=True, reduction=MetricReduction.MEAN_BATCH, get_not_nans=True)
+        self.val_metric = DiceMetric(include_background=True, reduction=MetricReduction.MEAN_BATCH, get_not_nans=True)
+        self.test_metric = DiceMetric(include_background=True, reduction=MetricReduction.MEAN_BATCH, get_not_nans=True)
         
         # for averaging loss across batches
-        self.train_loss_1 = MeanMetric()
-        self.val_loss_1 = MeanMetric()
-        self.test_loss_1 = MeanMetric()
-        
-        self.train_loss_2 = MeanMetric()
-        self.val_loss_2 = MeanMetric()
-        self.test_loss_2 = MeanMetric()
-        
-        self.train_loss_3 = MeanMetric()
-        self.val_loss_3 = MeanMetric()
-        self.test_loss_3 = MeanMetric()
-        
-        self.train_loss_total = MeanMetric()
-        self.val_loss_total = MeanMetric()
-        self.test_loss_total = MeanMetric()
+        self.train_loss = MeanMetric()
+        self.val_loss = MeanMetric()
+        self.test_loss = MeanMetric()
 
         # for tracking best so far validation accuracy
-        self.val_metric_best_1 = MaxMetric()
-        self.val_metric_best_2 = MaxMetric()
+        self.val_metric_best = MaxMetric()
 
-
-    def forward(self, x: torch.Tensor, x_bbox: torch.Tensor) -> torch.Tensor:
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Perform a forward pass through the model `self.net`.
 
         :param x: A tensor of images.
         :return: A tensor of logits.
         """
-        return self.net(x, x_bbox)
+        return self.net(x)
 
     def on_train_start(self) -> None:
         """Lightning hook that is called when training begins."""
         # by default lightning executes validation step sanity checks before training starts,
         # so it's worth to make sure validation metrics don't store results from these checks
-        self.val_loss_1.reset()
-        self.val_loss_2.reset()
-        self.val_loss_3.reset()
+        self.val_loss.reset()
         self.val_loss_total.reset()
-        self.val_metric_1.reset()
-        self.val_metric_2.reset()
-        self.val_metric_best_1.reset()
-        self.val_metric_best_2.reset()
+        self.val_metric.reset()
+        self.val_metric_best.reset()
 
     def model_step(
-        self, batch: Tuple[torch.Tensor, torch.Tensor, torch.Tensor]
+        self, batch: Any
     ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """Perform a single model step on a batch of data.
 
@@ -148,27 +137,10 @@ class SwinUNETRModule(LightningModule):
             - A tensor of predictions.
             - A tensor of target labels.
         """
-        images, bboxes, gt_masks = batch
-        batch_size = images.size(0)
-        
-        pred_masks, iou_predictions = self.forward(images, bboxes)
-        num_masks = sum(len(pred_mask) for pred_mask in pred_masks)
-        
-        loss_focal = torch.tensor(0., device=self.device)
-        loss_dice = torch.tensor(0., device=self.device)
-        loss_iou = torch.tensor(0., device=self.device)
-        for pred_mask, gt_mask, iou_prediction in zip(pred_masks, gt_masks, iou_predictions):
-            loss_focal += self.criterion_1(pred_mask, gt_mask, num_masks)
-            loss_dice += self.criterion_2(pred_mask, gt_mask, num_masks)
-            loss_iou += self.criterion_3(pred_mask, gt_mask, iou_prediction, num_masks)
-
-        # loss_focal = self.criterion_1(pred_masks, gt_masks, num_masks)
-        # loss_dice = self.criterion_2(pred_masks, gt_masks, num_masks)
-        # loss_iou = self.criterion_3(pred_masks, gt_masks, iou_predictions, num_masks)
-        
-        total_loss = 20. * loss_focal + loss_dice + loss_iou
-        return loss_focal, loss_dice, loss_iou, total_loss, \
-                pred_masks, gt_masks
+        image, target = batch["image"], batch["label"]
+        logits = self.forward(image)
+        loss = self.criterion(logits, target)
+        return loss, logits, target
 
     def training_step(
         self, batch: Tuple[torch.Tensor, torch.Tensor], batch_idx: int
@@ -180,29 +152,18 @@ class SwinUNETRModule(LightningModule):
         :param batch_idx: The index of the current batch.
         :return: A tensor of losses between model predictions and targets.
         """
-        loss_focal, loss_dice, loss_iou, total_loss, pred_masks, gt_masks = self.model_step(batch)
+        loss, pred_masks, gt_masks = self.model_step(batch)
 
         # update and log metrics
-        self.train_loss_1(loss_focal)
-        self.train_loss_2(loss_dice)
-        self.train_loss_3(loss_iou)
-        self.train_loss_total(total_loss)
+        self.train_loss(loss)
         
-        for pred_mask, gt_mask in zip(pred_masks, gt_masks):
-            self.train_metric_1(pred_mask, gt_mask.int())
-            self.train_metric_2(pred_mask, gt_mask.int())
+        self.train_metric(pred_masks, gt_masks.int())
         
-        self.log("train/focal_loss", self.train_loss_1, on_step=False, on_epoch=True, prog_bar=True)
-        self.log("train/dice_loss", self.train_loss_2, on_step=False, on_epoch=True, prog_bar=True)
-        self.log("train/iou_loss", self.train_loss_3, on_step=False, on_epoch=True, prog_bar=True)
-        self.log("train/loss", self.train_loss_total, on_step=False, on_epoch=True, prog_bar=True)
-        
-        self.log("train/jaccard", self.train_metric_1, on_step=False, on_epoch=True, prog_bar=True)
-        self.log("train/f1", self.train_metric_2, on_step=False, on_epoch=True, prog_bar=True)
-        
+        self.log("train/loss", self.train_loss, on_step=False, on_epoch=True, prog_bar=True)
+        self.log("train/dice", self.train_metric, on_step=False, on_epoch=True, prog_bar=True)
 
         # return loss or backpropagation will fail
-        return total_loss
+        return loss
 
     def on_train_epoch_end(self) -> None:
         "Lightning hook that is called when a training epoch ends."

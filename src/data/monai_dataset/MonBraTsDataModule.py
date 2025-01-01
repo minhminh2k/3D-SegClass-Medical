@@ -181,7 +181,7 @@ class MonBraTsDataModule(LightningDataModule):
         """
         return DataLoader(
             dataset=self.data_val,
-            batch_size=1, # self.batch_size_per_device,
+            batch_size=self.batch_size_per_device, # 1
             num_workers=self.hparams.num_workers,
             pin_memory=self.hparams.pin_memory,
             shuffle=False,
@@ -194,7 +194,7 @@ class MonBraTsDataModule(LightningDataModule):
         """
         return DataLoader(
             dataset=self.data_test,
-            batch_size=1, # self.batch_size_per_device,
+            batch_size=self.batch_size_per_device, # 1
             num_workers=self.hparams.num_workers,
             pin_memory=self.hparams.pin_memory,
             shuffle=False,

@@ -1,0 +1,7 @@
+wandb_callback:
+  _target_: src.utils.callbacks.swinunetr.wandb_callback_swinunetr.WandbCallback_SwinUNETR
+  img_size: 1024
+  n_images_to_log: 4
+  image_path: 
+  data_path: 
+  annotation_path: 
