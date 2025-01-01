@@ -10,19 +10,16 @@ from src.models.losses.dice_loss import DiceLoss
 from src.models.losses.focal_loss import FocalLoss
 from src.models.losses.iou_loss import IoULoss
 import torch.nn.functional as F
+from monai import transforms
+from monai.transforms import (
+    AsDiscrete,
+    Activations,
+    LoadImaged
+)
+from monai.data import Dataset
+from monai.data import decollate_batch
 
-def lr_lambda(step, warmup_steps, steps, decay_factor):
-    if step < warmup_steps:
-        return step / warmup_steps
-    elif step < steps[0]:
-        return 1.0
-    elif step < steps[1]:
-        return 1 / decay_factor
-    else:
-        return 1 / (decay_factor**2)
-
-
-class SegFormer3DLitModule(LightningModule):
+class SwinUNETRModule(LightningModule):
     """Example of a `LightningModule` for Fine-tuning SAM.
 
     A `LightningModule` implements 8 key methods:
@@ -309,10 +306,7 @@ class SegFormer3DLitModule(LightningModule):
         """
         optimizer = self.hparams.optimizer(params=self.trainer.model.parameters())
         if self.hparams.scheduler is not None:
-            scheduler = self.hparams.scheduler(
-                optimizer=optimizer, 
-                lr_lambda=lambda step: lr_lambda(step, self.hparams.warmup_steps, self.hparams.steps, self.hparams.decay_factor)
-            )
+            scheduler = self.hparams.scheduler(optimizer=optimizer)
             return {
                 "optimizer": optimizer,
                 "lr_scheduler": {
@@ -346,6 +340,6 @@ if __name__ == "__main__":
         batch = torch.rand(1, 3, 1024, 1024)
         output = model(batch)
 
-        print(f"output shape: {output.shape}")  # [1, 1, 256, 256]
+        print(f"output shape: {output.shape}")
 
     main()

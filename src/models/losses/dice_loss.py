@@ -2,6 +2,10 @@ import torch
 from torch import nn
 import torch.nn.functional as F
 
+"""
+Implementation of Dice Loss from https://github.com/Mr-TalhaIlyas/Loss-Functions-Package-Tensorflow-Keras-PyTorch
+"""
+
 class DiceLoss(nn.Module):
     def __init__(self):
         super().__init__()

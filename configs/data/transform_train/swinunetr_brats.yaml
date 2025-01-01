@@ -1,0 +1,53 @@
+_target_: monai.transforms.Compose
+
+transforms:
+  - _target_: monai.transforms.LoadImaged
+    keys: ["image", "label"]
+
+  - _target_: monai.transforms.ConvertToMultiChannelBasedOnBratsClassesd
+    keys: "label"
+    prob: 0.30
+    spatial_axis: 1
+
+  - _target_: monai.transforms.CropForegroundd
+    keys: ["image", "label"]
+    source_key: "image"
+    k_divisible: [128, 128, 128]
+
+  - _target_: monai.transforms.RandSpatialCropd
+    keys: ["image", "label"]
+    roi_size: [128, 128, 128]
+    random_size: False
+
+  - _target_: monai.transforms.RandFlipd
+    keys: ["image", "label"]
+    prob: 0.5
+    spatial_axis: 0
+
+  - _target_: monai.transforms.RandFlipd
+    keys: ["image", "label"]
+    prob: 0.5
+    spatial_axis: 1
+
+  - _target_: monai.transforms.RandFlipd
+    keys: ["image", "label"]
+    prob: 0.5
+    spatial_axis: 2
+
+  - _target_: monai.transforms.NormalizeIntensityd
+    keys: "image"
+    nonzero: True
+    channel_wise: Truev
+  
+  - _target_: monai.transforms.RandScaleIntensityd
+    keys: "image"
+    factor: 0.1
+    prob: 1.0
+
+  - _target_: monai.transforms.RandShiftIntensityd
+    keys: "image"
+    factor: 0.1
+    prob: 1.0
+
+  # - _target_: monai.transforms.ToTensord
+  #   keys: ["image", "label"]
