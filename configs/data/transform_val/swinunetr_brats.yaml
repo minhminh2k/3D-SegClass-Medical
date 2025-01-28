@@ -7,6 +7,16 @@ transforms:
   - _target_: monai.transforms.ConvertToMultiChannelBasedOnBratsClassesd
     keys: "label"
 
+  - _target_: monai.transforms.CropForegroundd
+    keys: ["image", "label"]
+    source_key: "image"
+    k_divisible: [128, 128, 128]
+
+  - _target_: monai.transforms.RandSpatialCropd
+    keys: ["image", "label"]
+    roi_size: [128, 128, 128]
+    random_size: False
+
   - _target_: monai.transforms.NormalizeIntensityd
     keys: "image"
     nonzero: True

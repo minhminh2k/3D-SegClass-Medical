@@ -1,4 +1,4 @@
-_target_: src.models.swin-unetr.components.SwinUNETR
+_target_: src.models.swin-unetr.components.SwinUNETR.SwinUNETR
 
 img_size: [128, 128, 128]
 in_channels: 4

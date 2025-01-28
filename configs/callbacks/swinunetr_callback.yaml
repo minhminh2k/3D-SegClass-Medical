@@ -1,7 +1,24 @@
 wandb_callback:
-  _target_: src.utils.callbacks.swinunetr.wandb_callback_swinunetr.WandbCallback_SwinUNETR
-  img_size: 1024
+  _target_: src.utils.callbacks.monai_callbacks.swinunetr_wandb.SwinUNETRCallback
   n_images_to_log: 4
-  image_path: 
-  data_path: 
-  annotation_path: 
+  slice_num: 100
+  data_dir: /data/hpc/dqm/data/brats-2021/TrainingData
+  case_num: '01282'
+  roi_size: [128, 128, 128]
+  num_classes: 4
+  classes_name: ["Whole Tumor", "Enhancing Tumore", "Tumor Core"]
+  colors: ["#FFFF1E", "#007339", "#FF0000", "#FF0000"] 
+  case_names:
+    [
+      "BRATS_058.nii.gz",
+      "BRATS_059.nii.gz",
+      "BRATS_076.nii.gz",
+      "BRATS_077.nii.gz",
+      "BRATS_099.nii.gz",
+      "BRATS_113.nii.gz",
+      "BRATS_114.nii.gz",
+      "BRATS_124.nii.gz", 
+      "BRATS_139.nii.gz",
+    ]
+  frame_nums: [67, 60, 45, 48, 89, 85, 10, 44, 84] 
+  

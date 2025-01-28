@@ -1,0 +1,184 @@
+########################################################## ACDC ##########################################################
+acdc: # path to acdc prediction 
+  pred_folders:
+    [
+      "preds/ACDC/labelsTs",
+      "preds/ACDC/segformer3d",
+      "preds/ACDC/nnformer",
+      "preds/ACDC/unetr",
+    ]
+  case_names:
+    [
+      'patient002_frame01.nii.gz',
+      'patient002_frame12.nii.gz',
+      'patient003_frame01.nii.gz',
+      'patient003_frame15.nii.gz',
+      'patient008_frame01.nii.gz',
+      'patient008_frame13.nii.gz',
+      'patient009_frame01.nii.gz',
+      'patient009_frame13.nii.gz',
+      'patient012_frame01.nii.gz',
+      'patient012_frame13.nii.gz',
+      'patient014_frame01.nii.gz', 
+      'patient014_frame13.nii.gz',
+      'patient017_frame01.nii.gz',
+      'patient017_frame09.nii.gz',
+      'patient024_frame01.nii.gz',
+      'patient024_frame09.nii.gz',
+      'patient042_frame01.nii.gz',
+      'patient042_frame16.nii.gz',
+      'patient048_frame01.nii.gz',
+      'patient048_frame08.nii.gz',
+      'patient049_frame01.nii.gz',
+      'patient049_frame11.nii.gz',
+      'patient053_frame01.nii.gz',
+      'patient053_frame12.nii.gz',
+      'patient055_frame01.nii.gz',
+      'patient055_frame10.nii.gz',
+      'patient064_frame01.nii.gz',
+      'patient064_frame12.nii.gz',
+      'patient067_frame01.nii.gz',
+      'patient067_frame10.nii.gz',
+      'patient079_frame01.nii.gz',
+      'patient079_frame11.nii.gz',
+      'patient081_frame01.nii.gz',
+      'patient081_frame07.nii.gz',
+      'patient088_frame01.nii.gz',
+      'patient088_frame12.nii.gz',
+      'patient092_frame01.nii.gz',
+      'patient092_frame06.nii.gz',
+      'patient095_frame01.nii.gz',
+      'patient095_frame12.nii.gz',
+    ]
+  data_folder: "data/ACDC"
+  frame_nums: 
+    [
+      '10',
+      '10',
+      '10',
+      '10',
+      '10',
+      '10',
+      '10',
+      '10',
+      '10',
+      '10',
+      '10',
+      '10',
+      '9',
+      '9',
+      '8',
+      '8',
+      '9',
+      '9',
+      '8',
+      '8',
+      '7',
+      '7',
+      '7',
+      '7',
+      '9',
+      '9',
+      '10',
+      '10',
+      '10',
+      '10',
+      '9',
+      '9',
+      '17',
+      '17',
+      '16',
+      '16',
+      '15',
+      '15',
+      '14',
+      '14',
+    ] 
+  num_classes: 4 # including background 
+  class_names: ["RV", "Myo", "LV"] # [right ventricle, myocardium, left ventricle]
+  colors: ["#FFFF1E", "#00F0F0", "#FF0000", "#FF0000"] # (Yellow, Cyan, Red)
+  fig_save_dir: "renders/ACDC"
+########################################################## SYNAPSE ##########################################################
+synapse: # path to synapse prediction
+  pred_folders:  
+    [
+      "preds/SYNAPSE/labelsTs",
+      "preds/SYNAPSE/segformer3d",
+      "preds/SYNAPSE/nnformer",
+      "preds/SYNAPSE/unetr",
+    ]
+  case_names:
+    [ 
+      'img0001.nii.gz',
+      'img0002.nii.gz',
+      'img0004.nii.gz',
+      'img0008.nii.gz', 
+      'img0022.nii.gz',
+      'img0025.nii.gz', 
+      'img0029.nii.gz', 
+      'img0032.nii.gz',
+      'img0036.nii.gz',
+    ]
+  data_folder: "data/SYNAPSE"
+  frame_nums: [147, 139, 140, 148, 89, 85, 100, 144, 184] # number of frames in each sample
+  num_classes: 9 # including background 
+  class_names: 
+    [
+      "spleen", 
+      "right kidney", 
+      "left kidney", 
+      "gallbladder", 
+      "liver", 
+      "stomach",
+      "aorta", 
+      "pancreas", 
+    ]
+  colors: ["#FFFF7B", "#B5FFFF", "#0080C0", "#FF8040", "#88FFA6",  "#FF0000", "#008000", "#FF80C0"]
+  fig_save_dir: "renders/SYNAPSE"
+########################################################## BRATS ##########################################################
+brats:
+  pred_folders: # path to brats2017 prediction 
+    [
+      "preds/Tumor/labelsTs",
+      "preds/Tumor/segformer3d",
+      "preds/Tumor/nnformer",
+      "preds/Tumor/unetr",
+    ]
+  case_names:
+    [
+      "BRATS_058.nii.gz",
+      "BRATS_059.nii.gz",
+      "BRATS_076.nii.gz",
+      "BRATS_077.nii.gz",
+      "BRATS_099.nii.gz",
+      "BRATS_113.nii.gz",
+      "BRATS_114.nii.gz",
+      "BRATS_124.nii.gz", 
+      "BRATS_139.nii.gz",
+      "BRATS_151.nii.gz",
+      "BRATS_152.nii.gz",
+      "BRATS_157.nii.gz",
+      "BRATS_190.nii.gz",
+      "BRATS_240.nii.gz",
+      "BRATS_242.nii.gz",
+      "BRATS_295.nii.gz",
+      "BRATS_305.nii.gz",
+      "BRATS_325.nii.gz",
+      "BRATS_331.nii.gz",
+      "BRATS_362.nii.gz",
+      "BRATS_389.nii.gz",
+      "BRATS_425.nii.gz",
+      "BRATS_432.nii.gz",
+      "BRATS_450.nii.gz",
+    ]
+  data_folder: "data/TUMOR"
+  frame_nums: 128 # number of frames in each data 
+  num_classes: 4 # including background 
+  class_names: 
+    [
+      "Whole Tumor", 
+      "Enhancing Tumore", 
+      "Tumor Core", 
+    ]
+  colors: ["#FFFF1E", "#007339", "#FF0000", "#FF0000"] 
+  fig_save_dir: "renders/TUMOR"

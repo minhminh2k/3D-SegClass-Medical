@@ -1,0 +1,32 @@
+wandb_callback:
+  _target_: src.utils.callbacks.monai_callbacks.swinunetr_wandb.SwinUNETRCallback
+  n_images_to_log: 4
+  slice_num: 100
+  data_dir: /data/hpc/dqm/data/brats-2021/TrainingData
+  case_num: '01282'
+  roi_size: [128, 128, 128] # including background 
+  num_classes: 9
+  classes_name: [
+      "spleen", 
+      "right kidney", 
+      "left kidney", 
+      "gallbladder", 
+      "liver", 
+      "stomach",
+      "aorta", 
+      "pancreas", 
+    ]
+  colors: ["#FFFF7B", "#B5FFFF", "#0080C0", "#FF8040", "#88FFA6",  "#FF0000", "#008000", "#FF80C0"]
+  frame_nums: [147, 139, 140, 148, 89, 85, 100, 144, 184] 
+  case_names:
+    [ 
+      'img0001.nii.gz',
+      'img0002.nii.gz',
+      'img0004.nii.gz',
+      'img0008.nii.gz', 
+      'img0022.nii.gz',
+      'img0025.nii.gz', 
+      'img0029.nii.gz', 
+      'img0032.nii.gz',
+      'img0036.nii.gz',
+    ]

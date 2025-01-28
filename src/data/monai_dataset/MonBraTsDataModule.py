@@ -3,7 +3,7 @@ from typing import Any, Dict, Optional, Tuple
 import logging
 import torch
 from lightning import LightningDataModule
-from torch.utils.data import ConcatDataset, DataLoader, Dataset, random_split
+from torch.utils.data import ConcatDataset, Dataset, random_split
 from torchvision.datasets import MNIST
 from torchvision.transforms import transforms
 
@@ -12,6 +12,7 @@ from monai.transforms import Compose
 from .components.utils import datafold_read
 from .components.brats21_dataset import BraTs21_Dataset
 from sklearn.model_selection import train_test_split
+from monai.data import DataLoader
 
 logging.basicConfig(
     level=logging.INFO,
@@ -76,6 +77,7 @@ class MonBraTsDataModule(LightningDataModule):
         num_workers: int = 0,
         pin_memory: bool = False,
         num_classes: int = 3,
+        samples: int = 1000,
     ) -> None:
         """Initialize a `MonAIBraTsDataModule`.
 
@@ -134,6 +136,8 @@ class MonBraTsDataModule(LightningDataModule):
             )
             
             data_list = train_dataset + val_dataset
+            data_list = data_list[0:self.hparams.samples] \
+                if len(data_list) >= self.hparams.samples else data_list 
             
             train_data, val_test_data = train_test_split(
                 data_list,
@@ -154,14 +158,15 @@ class MonBraTsDataModule(LightningDataModule):
                         
             # Transform Val
             self.data_val = BraTs21_Dataset(data_dir=self.hparams.data_dir, data_list=val_data, transform=self.hparams.transform_val)
-            self.data_test = BraTs21_Dataset(data_dir=self.hparams.data_dir, data_list=test_data, transform=self.hparams.transforms_val)
+            self.data_test = BraTs21_Dataset(data_dir=self.hparams.data_dir, data_list=test_data, transform=self.hparams.transform_val)
             
+            logging.info(f"Full Dataset: {len(data_list)}")
             logging.info("Train Val Test Split Dataset")
             logging.info(f"Train Dataset: {len(self.data_train)}")
             logging.info(f"Val Dataset: {len(self.data_val)}")
             logging.info(f"Test Dataset: {len(self.data_test)}")
 
-    def train_dataloader(self) -> DataLoader[Any]:
+    def train_dataloader(self) -> DataLoader: # DataLoader[Any]
         """Create and return the train dataloader.
 
         :return: The train dataloader.
@@ -174,11 +179,19 @@ class MonBraTsDataModule(LightningDataModule):
             shuffle=True,
         )
 
-    def val_dataloader(self) -> DataLoader[Any]:
+    def val_dataloader(self) -> DataLoader: # DataLoader[Any]
         """Create and return the validation dataloader.
 
         :return: The validation dataloader.
         """
+        dataloader = DataLoader(
+            dataset=self.data_val,
+            batch_size=self.batch_size_per_device, # 1
+            num_workers=self.hparams.num_workers,
+            pin_memory=self.hparams.pin_memory,
+            shuffle=False,
+        )
+        
         return DataLoader(
             dataset=self.data_val,
             batch_size=self.batch_size_per_device, # 1
@@ -187,7 +200,7 @@ class MonBraTsDataModule(LightningDataModule):
             shuffle=False,
         )
 
-    def test_dataloader(self) -> DataLoader[Any]:
+    def test_dataloader(self) -> DataLoader: # DataLoader[Any]
         """Create and return the test dataloader.
 
         :return: The test dataloader.

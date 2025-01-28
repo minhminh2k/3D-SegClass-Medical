@@ -1,4 +1,4 @@
-_target_: src.models.unet.unet_module.UNetLitModule
+_target_: src.models.swin-unetr.SwinUNETRModule.SwinUNETRModule
 defaults:
   - criterion: diceloss_monai.yaml
   - net: SwinUNETR.yaml
@@ -13,3 +13,7 @@ scheduler:
   _target_: torch.optim.lr_scheduler.CosineAnnealingLR
   _partial_: true
   T_max: ${trainer.max_epochs}
+  
+# compile model for faster training with pytorch 2.0
+compile: false
+num_classes: 4 # including background

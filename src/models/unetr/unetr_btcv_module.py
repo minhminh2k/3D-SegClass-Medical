@@ -9,7 +9,6 @@ from monai.inferers import sliding_window_inference
 from monai.transforms import (
     AsDiscrete,
     Activations,
-    CropForegroundd
 )
 from monai.data import decollate_batch
 from monai.metrics import DiceMetric
@@ -25,7 +24,7 @@ logging.basicConfig(
     datefmt="%Y-%m-%d %H:%M:%S"
 )
 
-class SwinUNETRModule(LightningModule):
+class UNETR_BTCV_Module(LightningModule):
     """Example of a `LightningModule` for Fine-tuning SAM.
 
     A `LightningModule` implements 8 key methods:
@@ -68,7 +67,7 @@ class SwinUNETRModule(LightningModule):
         roi_size: Tuple[int, int, int] = [128, 128, 128],
         sw_batch_size: int = 4,
         infer_overlap: float = 0.5,
-        num_classes: int = 4,
+        num_classes: int = 14,
     ) -> None:
         """Initialize a `MNISTLitModule`.
 
@@ -87,13 +86,9 @@ class SwinUNETRModule(LightningModule):
         # loss function
         self.criterion = criterion
         
-        # Post processing each class
-        self.post_sigmoid = Activations(sigmoid=True)
-        self.post_pred = AsDiscrete(argmax=False, threshold=0.5)
-        
         # Post processing for many classes
-        # self.post_pred = AsDiscrete(argmax=True, to_onehot=self.hparams.num_classes)
-        # self.post_label = AsDiscrete(to_onehot=self.hparams.num_classes)
+        self.post_pred = AsDiscrete(argmax=True, to_onehot=self.hparams.num_classes)
+        self.post_label = AsDiscrete(to_onehot=self.hparams.num_classes)
         
         # Not use
         # self.model_inferer = partial(
@@ -105,14 +100,10 @@ class SwinUNETRModule(LightningModule):
         # )
         
         # metric objects for calculating and averaging accuracy across batches
-        self.train_metric = DiceMetric(include_background=True, reduction=MetricReduction.MEAN_BATCH, get_not_nans=True)
-        self.val_metric = DiceMetric(include_background=True, reduction=MetricReduction.MEAN_BATCH, get_not_nans=True)
-        self.test_metric = DiceMetric(include_background=True, reduction=MetricReduction.MEAN_BATCH, get_not_nans=True)
+        self.train_metric = DiceMetric(include_background=True, reduction=MetricReduction.MEAN_BATCH, get_not_nans=False)
+        self.val_metric = DiceMetric(include_background=True, reduction=MetricReduction.MEAN_BATCH, get_not_nans=False)
+        self.test_metric = DiceMetric(include_background=True, reduction=MetricReduction.MEAN_BATCH, get_not_nans=False)
         
-        # self.train_metric = Dice(average='macro', num_classes=self.hparams.num_classes, ignore_index=0) # ignore background
-        # self.val_metric = Dice(average='macro', num_classes=self.hparams.num_classes, ignore_index=0)
-        # self.test_metric = Dice(average='macro', num_classes=self.hparams.num_classes, ignore_index=0)
-
         # for averaging loss across batches
         self.train_loss = MeanMetric()
         self.val_loss = MeanMetric()
@@ -152,14 +143,11 @@ class SwinUNETRModule(LightningModule):
         """
         image, target = batch["image"], batch["label"]
         
-        # Before forward
         logging.info(f"Image shape: {image.shape}, Target shape: {target.shape}")
         logging.info(f"Max Image: {torch.max(image)}, Min Image: {torch.min(image)}")
         logging.info(f"Max Target: {torch.max(target)}, Min Target: {torch.min(target)}")
         
         logits = self.forward(image)
-        
-        # After forward
         logging.info(f"Logits shape: {logits.shape}")
         logging.info(f"Max Logits: {torch.max(target)}, Min Logits: {torch.min(target)}")
         
@@ -189,18 +177,17 @@ class SwinUNETRModule(LightningModule):
         
         # update and log metrics
         self.train_loss(loss)
-        train_dice = self.train_metric(y_pred=outputs_convert, y=labels_list)
-        logging.info(f"askdsadsduh {train_dice}")
+        dice = self.train_metric(y_pred=outputs_convert, y=labels_list)
         
         self.log("train/loss", self.train_loss, on_step=False, on_epoch=True, prog_bar=True)
-        self.log("train/dice", train_dice[0, 1], on_step=False, on_epoch=True, prog_bar=True) # Whole tumor
+        self.log("train/dice", dice[0, 1].item(), on_step=False, on_epoch=True, prog_bar=True)
 
         # return loss or backpropagation will fail
         return loss
 
     def on_train_epoch_end(self) -> None:
         "Lightning hook that is called when a training epoch ends."
-        acc1, _ = self.train_metric.aggregate()  # get current val acc
+        acc1 = self.train_metric.aggregate()  # get current val acc
         dice_tc, dice_wt, dice_et = acc1[0:3]
         
         self.train_metric.reset()
@@ -239,17 +226,18 @@ class SwinUNETRModule(LightningModule):
         
         # update and log metrics
         self.val_loss(loss) 
-        val_dice = self.val_metric(y_pred=outputs_convert, y=labels_list) # label_convert
+        self.val_metric(y_pred=outputs_convert, y=labels_list) # label_convert
+        val_dice = self.val_metric(outputs_convert, labels_list)
         logging.info(f"Val Dice Step {val_dice}")
         
         self.log("val/loss", self.val_loss, on_step=False, on_epoch=True, prog_bar=True)
-        self.log("val/dice", val_dice[0, 1], on_step=False, on_epoch=True, prog_bar=True)
+        self.log("val/dice", val_dice[0, 1].item(), on_step=False, on_epoch=True, prog_bar=True)
         
         return {"loss": loss, "preds": pred_masks, "targets": labels}
         
     def on_validation_epoch_end(self) -> None:
         "Lightning hook that is called when a validation epoch ends."
-        acc1, _ = self.val_metric.aggregate()  # get current val acc
+        acc1 = self.val_metric.aggregate()  # get current val acc
         dice_tc, dice_wt, dice_et = acc1[0:3]
         self.val_metric.reset()
         
@@ -284,23 +272,25 @@ class SwinUNETRModule(LightningModule):
         labels_list = decollate_batch(labels)
         outputs_list = decollate_batch(pred_masks)
         outputs_convert =  [self.post_pred(self.post_sigmoid(pred_tensor)) for pred_tensor in outputs_list]
-        
         # outputs_convert =  [self.post_pred(pred_tensor) for pred_tensor in outputs_list]
+        
         # label_convert = [self.post_label(i) for i in labels_list]
 
         # update and log metrics
         self.test_loss(loss)
-        test_dice = self.test_metric(y_pred=outputs_convert, y=labels_list)
+        
+        self.test_metric(y_pred=outputs_convert, y=labels_list)
+        test_dice = self.test_metric(outputs_convert, labels_list)
         
         self.log("test/loss", self.test_loss, on_step=False, on_epoch=True, prog_bar=True)
         
-        self.log("test/dice", test_dice[0, 1], on_step=False, on_epoch=True, prog_bar=True) # whole tumor
+        self.log("test/dice", test_dice[0, 1].item(), on_step=False, on_epoch=True, prog_bar=True)
         
         return {"loss": loss, "preds": pred_masks, "targets": labels}
         
     def on_test_epoch_end(self) -> None:
         """Lightning hook that is called when a test epoch ends."""
-        acc1, _ = self.test_metric.aggregate()  # get current val acc
+        acc1 = self.test_metric.aggregate()  # get current val acc
         dice_tc, dice_wt, dice_et = acc1[0:3]
 
         self.test_metric.reset()

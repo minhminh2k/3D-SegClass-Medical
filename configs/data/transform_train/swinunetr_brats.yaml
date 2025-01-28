@@ -6,9 +6,7 @@ transforms:
 
   - _target_: monai.transforms.ConvertToMultiChannelBasedOnBratsClassesd
     keys: "label"
-    prob: 0.30
-    spatial_axis: 1
-
+    
   - _target_: monai.transforms.CropForegroundd
     keys: ["image", "label"]
     source_key: "image"
@@ -37,16 +35,16 @@ transforms:
   - _target_: monai.transforms.NormalizeIntensityd
     keys: "image"
     nonzero: True
-    channel_wise: Truev
+    channel_wise: True
   
   - _target_: monai.transforms.RandScaleIntensityd
     keys: "image"
-    factor: 0.1
+    factors: 0.1
     prob: 1.0
 
   - _target_: monai.transforms.RandShiftIntensityd
     keys: "image"
-    factor: 0.1
+    offsets: 0.1
     prob: 1.0
 
   # - _target_: monai.transforms.ToTensord

@@ -1,0 +1,17 @@
+_target_: src.models.unetr.components.UNETR.UNETR
+
+img_size: [128, 128, 128]
+in_channels: 4
+out_channels: 3
+feature_size: 32
+hidden_size: 768
+mlp_dim: 3072
+proj_type: conv
+num_heads: 12
+norm_name: instance
+conv_block: True
+res_block: True
+dropout_rate: 0.0
+spatial_dims: 3
+qkv_bias: False
+save_attn: False
