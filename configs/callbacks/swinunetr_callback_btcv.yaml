@@ -1,9 +1,7 @@
 wandb_callback:
   _target_: src.utils.callbacks.monai_callbacks.swinunetr_wandb.SwinUNETRCallback
   n_images_to_log: 4
-  slice_num: 100
   data_dir: /data/hpc/dqm/data/brats-2021/TrainingData
-  case_num: '01282'
   roi_size: [128, 128, 128] # including background 
   num_classes: 9
   classes_name: [

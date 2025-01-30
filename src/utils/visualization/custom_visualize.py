@@ -19,9 +19,7 @@ def custom_visualization(
     frame_nums: list[int],
     class_names: list[str],
     colors: list[str],
-    logger: Any,
     fig_size: tuple[int],
-    key: str
 ):
     # Custom frame_nums
     # ...
@@ -36,22 +34,18 @@ def custom_visualization(
         colors=colors,
         img_normalize=True,
         transparency=0.65,
-        logger=logger,
         fig_size=fig_size,
-        key=key
     )
 
 def render_and_save_gridspec(
     image: Any,
     label: Any,
     pred: Any,
-    logger: Any,
     frame_nums: list,
     num_classes: int,
     class_names: list,
     colors: list,
     img_normalize: bool,
-    key: str,
     transparency: float = 1.0,
     fig_size: tuple[int] = [2, 2],
 ):
@@ -112,25 +106,21 @@ def render_and_save_gridspec(
         frameon=False,
     )
 
-    buffer = BytesIO()
-    plt.savefig(
-        buffer,
-        bbox_inches="tight",
-        dpi=1200,
-        format="png",
-        pil_kwargs={"compression": "tiff_lzw"},
-    )
+    # buffer = BytesIO()
+    # plt.savefig(
+    #     buffer,
+    #     bbox_inches="tight",
+    #     dpi=1200,
+    #     format="png",
+    #     pil_kwargs={"compression": "tiff_lzw"},
+    # )
     
-    buffer.seek(0)
+    # buffer.seek(0)
     
-    logger.log_image(
-        key=key,
-        images=[buffer],
-        caption="Visualization",
-    )
+    return legend_ax
 
-    plt.close()
-    buffer.close()
+    # plt.close()
+    # buffer.close()
     # prevent using excessive memory
 
 

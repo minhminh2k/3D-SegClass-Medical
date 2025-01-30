@@ -2,3 +2,6 @@ _target_: monai.losses.DiceLoss
 
 to_onehot_y: False
 sigmoid: True
+squared_pred: True
+# smooth_nr: 0.0 # If squared_dice
+# smooth_dr: 0.000001 # If squared_dice

@@ -21,8 +21,8 @@ class LinearWarmupCosineAnnealingLR(_LRScheduler):
     def __init__(
         self,
         optimizer: Optimizer,
-        warmup_epochs: int,
-        max_epochs: int,
+        warmup_epochs: int = 50,
+        max_epochs: int = 300,
         warmup_start_lr: float = 0.0,
         eta_min: float = 0.0,
         last_epoch: int = -1,

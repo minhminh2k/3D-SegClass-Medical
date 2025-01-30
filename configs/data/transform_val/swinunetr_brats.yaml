@@ -21,6 +21,6 @@ transforms:
     keys: "image"
     nonzero: True
     channel_wise: True
-
-  # - _target_: monai.transforms.ToTensord
-  # keys: ["image", "label"] 
+  
+  - _target_: monai.transforms.ToTensord
+    keys: ["image", "label"]

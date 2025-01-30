@@ -47,5 +47,5 @@ transforms:
     offsets: 0.1
     prob: 1.0
 
-  # - _target_: monai.transforms.ToTensord
-  #   keys: ["image", "label"]
+  - _target_: monai.transforms.ToTensord
+    keys: ["image", "label"]

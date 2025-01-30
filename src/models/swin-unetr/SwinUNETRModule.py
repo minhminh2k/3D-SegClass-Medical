@@ -1,23 +1,21 @@
 from typing import Any, Dict, Tuple, List
 
 import torch
+import logging
 from lightning import LightningModule
 from torchmetrics import MaxMetric, MeanMetric
-from torchmetrics.classification.accuracy import Accuracy
 from torchmetrics import Dice, JaccardIndex, MaxMetric, MeanMetric
 from monai.inferers import sliding_window_inference
 from monai.transforms import (
     AsDiscrete,
     Activations,
-    CropForegroundd
 )
 from monai.data import decollate_batch
 from monai.metrics import DiceMetric
 from monai.utils.enums import MetricReduction
 from functools import partial
-from monai.losses import DiceLoss
 
-import logging
+# References: https://github.com/Project-MONAI/research-contributions/tree/main/SwinUNETR/BRATS21
 
 logging.basicConfig(
     level=logging.INFO,
@@ -190,7 +188,6 @@ class SwinUNETRModule(LightningModule):
         # update and log metrics
         self.train_loss(loss)
         train_dice = self.train_metric(y_pred=outputs_convert, y=labels_list)
-        logging.info(f"askdsadsduh {train_dice}")
         
         self.log("train/loss", self.train_loss, on_step=False, on_epoch=True, prog_bar=True)
         self.log("train/dice", train_dice[0, 1], on_step=False, on_epoch=True, prog_bar=True) # Whole tumor
