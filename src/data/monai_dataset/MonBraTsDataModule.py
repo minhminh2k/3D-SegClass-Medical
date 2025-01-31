@@ -184,14 +184,7 @@ class MonBraTsDataModule(LightningDataModule):
 
         :return: The validation dataloader.
         """
-        dataloader = DataLoader(
-            dataset=self.data_val,
-            batch_size=self.batch_size_per_device, # 1
-            num_workers=self.hparams.num_workers,
-            pin_memory=self.hparams.pin_memory,
-            shuffle=False,
-        )
-        
+
         return DataLoader(
             dataset=self.data_val,
             batch_size=self.batch_size_per_device, # 1

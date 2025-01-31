@@ -1,14 +1,16 @@
 wandb_callback:
   _target_: src.utils.callbacks.monai_callbacks.swinunetr_wandb.SwinUNETRCallback
   data_dir: /data/hpc/dqm/data/brats-2021/TrainingData
-  classes_name: ["Whole Tumor", "Enhancing Tumore", "Tumor Core"]
-  colors: ["#FFFF1E", "#007339", "#FF0000", "#FF0000"] 
-  n_images_to_log: 4
+  classes_name: ["Tumor Core", "Whole Tumore", "Enhancing Tumor"]
+  colors: ["#FFFFFF", "#FFFF1E", "#FF0000", "#007339"]
+  n_images_to_log: 1
+  frame_nums: [55, 70, 85, 100]
+  number_of_logged_samples: 2
   roi_size: [128, 128, 128]
   num_classes: 4
   case_names:
     [
-      "00058",
+      "01282",
       "00059",
       "00076",
       "00077",
@@ -18,5 +20,5 @@ wandb_callback:
       "00124", 
       "00139",
     ]
-  frame_nums: [67, 60, 45, 48, 89, 85, 10, 44, 84] 
+  
   

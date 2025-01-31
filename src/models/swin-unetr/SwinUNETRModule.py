@@ -2,6 +2,7 @@ from typing import Any, Dict, Tuple, List
 
 import torch
 import logging
+import numpy as np
 from lightning import LightningModule
 from torchmetrics import MaxMetric, MeanMetric
 from torchmetrics import Dice, JaccardIndex, MaxMetric, MeanMetric
@@ -148,18 +149,11 @@ class SwinUNETRModule(LightningModule):
             - A tensor of predictions.
             - A tensor of target labels.
         """
-        image, target = batch["image"], batch["label"]
+        image, target = batch["image"], batch["label"] # [1, 4, 128, 128, 128], [1, 3, 128, 128, 128]
         
-        # Before forward
-        logging.info(f"Image shape: {image.shape}, Target shape: {target.shape}")
-        logging.info(f"Max Image: {torch.max(image)}, Min Image: {torch.min(image)}")
-        logging.info(f"Max Target: {torch.max(target)}, Min Target: {torch.min(target)}")
-        
-        logits = self.forward(image)
-        
-        # After forward
-        logging.info(f"Logits shape: {logits.shape}")
-        logging.info(f"Max Logits: {torch.max(target)}, Min Logits: {torch.min(target)}")
+        logging.info(f"Max Image: {torch.max(image)}, Min Image: {torch.min(image)}") # -x. -> +1x.
+                
+        logits = self.forward(image) # [1, 3, 128, 128, 128]
         
         loss = self.criterion(logits, target)
         return loss, logits, target
@@ -174,13 +168,14 @@ class SwinUNETRModule(LightningModule):
         :param batch_idx: The index of the current batch.
         :return: A tensor of losses between model predictions and targets.
         """
-        loss, pred_masks, gt_masks = self.model_step(batch)
-        
-        logging.info(f"Before Decollate: Pred masks: {pred_masks.shape}, GT masks: {gt_masks.shape}")
-        
+        loss, pred_masks, gt_masks = self.model_step(batch) # [1, 4, 128, 128, 128], [1, 3, 128, 128, 128]
+            
         labels_list = decollate_batch(gt_masks)
         outputs_list = decollate_batch(pred_masks)
-        outputs_convert =  [self.post_pred(self.post_sigmoid(pred_tensor)) for pred_tensor in outputs_list]     
+        outputs_convert =  [self.post_pred(self.post_sigmoid(pred_tensor)) for pred_tensor in outputs_list]    
+        
+        logging.info(f"Labels_list: {len(labels_list)}") 
+        logging.info(f"Outputs_convert: {len(outputs_convert)}") 
         
         # outputs_convert =  [self.post_pred(pred_tensor) for pred_tensor in outputs_list]
         # label_convert = [self.post_label(i) for i in labels_list]
@@ -211,8 +206,7 @@ class SwinUNETRModule(LightningModule):
             labels.
         :param batch_idx: The index of the current batch.
         """
-        loss, pred_masks, labels = self.model_step(batch)
-        logging.info(f"Validation step: Image shape: {pred_masks.shape}, Target shape: {labels.shape}")
+        loss, pred_masks, labels = self.model_step(batch) # [1, 3, 128, 128, 128], ([1, 3, 128, 128, 128
 
         # images, labels = batch["image"], batch["label"]
         # pred_masks = sliding_window_inference(

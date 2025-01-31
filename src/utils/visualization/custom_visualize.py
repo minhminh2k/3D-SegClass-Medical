@@ -10,6 +10,7 @@ from io import BytesIO
 from matplotlib.lines import Line2D
 from torchvision.utils import draw_segmentation_masks
 import cv2
+import matplotlib.colors as mcolors
 
 def custom_visualization(
     image: Any,
@@ -23,8 +24,7 @@ def custom_visualization(
 ):
     # Custom frame_nums
     # ...
-    
-    render_and_save_gridspec(
+    return render_and_save_gridspec(
         image=image,
         label=label,
         pred=pred,
@@ -56,16 +56,16 @@ def render_and_save_gridspec(
     gs = gridspec.GridSpec(rows, cols, wspace=0.01, hspace=0.01)
     
     pred_masks = [label, pred]
-    
-    # rendering a fig_size x fig_size gird plot.
+    # rendering a fig_size x fig_size grid plot.
     for row, frame_ind in enumerate(frame_nums):
         for col, pred_mask in enumerate(pred_masks):
             seg_mask_volume = pred_mask
             axis = plt.subplot(gs[row, col])
             mask = seg_mask_volume[:, :, frame_ind]
-            image = image[:, :, frame_ind]
+            image_data = image[:, :, frame_ind]
+            
             overlayed_img = overlay(
-                image=image,
+                image=image_data,
                 seg_mask=mask,
                 num_classes=num_classes,
                 colors=colors,
@@ -102,24 +102,21 @@ def render_and_save_gridspec(
         loc="lower center",
         ncol=len(class_names),
         fontsize=2.5,
-        bbox_to_anchor=(-1, -0.33),
+        bbox_to_anchor=(0.5, -0.2), # -1, -0.33
         frameon=False,
     )
-
-    # buffer = BytesIO()
-    # plt.savefig(
-    #     buffer,
-    #     bbox_inches="tight",
-    #     dpi=1200,
-    #     format="png",
-    #     pil_kwargs={"compression": "tiff_lzw"},
-    # )
+    buffer = BytesIO()
+    plt.savefig(
+        buffer,
+        bbox_inches="tight",
+        dpi=1200,
+        format="png",
+        pil_kwargs={"compression": "tiff_lzw"},
+    )
     
-    # buffer.seek(0)
-    
-    return legend_ax
+    buffer.seek(0)
 
-    # plt.close()
+    return buffer
     # buffer.close()
     # prevent using excessive memory
 
@@ -132,6 +129,9 @@ def overlay(
     normalize: bool = False,
     transparency: float = 0.5,
 ):
+    
+    colors = [mcolors.hex2color(c) for c in colors]
+    colors = [(int(r * 255), int(g * 255), int(b * 255)) for r, g, b in colors]
     # image
     img = image
     if normalize:
