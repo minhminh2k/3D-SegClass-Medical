@@ -103,7 +103,7 @@ class MonBTCVDataModule(LightningDataModule):
     def num_classes(self) -> int:
         """Get the number of classes.
 
-        :return: The number of BraTs classes (4).
+        :return: The number of BTCV classes (14).
         """
         return self.hparams.num_classes
 
@@ -134,7 +134,6 @@ class MonBTCVDataModule(LightningDataModule):
             
             data_list = train_files + val_files
             
-            data_list = train_files + val_files
             data_list = data_list[0:self.hparams.samples] \
                 if len(data_list) >= self.hparams.samples else data_list 
             
@@ -160,7 +159,6 @@ class MonBTCVDataModule(LightningDataModule):
             self.data_test = BTCV_Dataset(data_dir=self.hparams.data_dir, data_list=test_data, transform=self.hparams.transform_val)
             
             logging.info(f"Full Dataset: {len(data_list)}")
-            logging.info("Train Val Test Split Dataset")
             logging.info(f"Train Dataset: {len(self.data_train)}")
             logging.info(f"Val Dataset: {len(self.data_val)}")
             logging.info(f"Test Dataset: {len(self.data_test)}")

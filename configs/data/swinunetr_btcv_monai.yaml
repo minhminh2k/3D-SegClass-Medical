@@ -1,11 +1,11 @@
-_target_: src.data.monai_dataset.MonBraTsDataModule.MonBraTsDataModule
+_target_: src.data.monai_dataset.MonBTCVDataModule.MonBTCVDataModule
 
 defaults:
   - transform_train: swinunetr_btcv.yaml
   - transform_val: swinunetr_btcv.yaml
 
 data_dir: /data/hpc/dqm/data/BTCV
-datalist_json: /data/hpc/dqm/3D-SegClass-Medical/preprocess_data/swin-unetr/btcv/dataset_0.json
+datalist_json: /data/hpc/dqm/data/BTCV/dataset_0.json
 batch_size: 1
 train_val_test_split: [0.7, 0.2, 0.1]
 num_workers: 2
