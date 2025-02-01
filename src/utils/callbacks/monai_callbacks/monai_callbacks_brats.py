@@ -13,7 +13,7 @@ import torch.nn.functional as F
 from io import BytesIO
 import nibabel as nib
 from monai import transforms
-from monai.transforms import Compose, ToTensord
+from monai.transforms import Compose
 from PIL import Image
 from lightning.pytorch.callbacks import Callback
 from torchvision.utils import make_grid

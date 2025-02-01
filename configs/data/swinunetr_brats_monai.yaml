@@ -11,5 +11,5 @@ train_val_test_split: [0.8, 0.1, 0.1]
 fold: 0
 num_workers: 2
 pin_memory: False
-num_classes: 3
+num_classes: 4
 samples: 1500

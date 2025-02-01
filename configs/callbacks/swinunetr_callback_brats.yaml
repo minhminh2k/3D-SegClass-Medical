@@ -1,5 +1,5 @@
 wandb_callback:
-  _target_: src.utils.callbacks.monai_callbacks.swinunetr_wandb.SwinUNETRCallback
+  _target_: src.utils.callbacks.monai_callbacks.monai_callbacks_brats.SwinUNETRCallback
   data_dir: /data/hpc/dqm/data/brats-2021/TrainingData
   classes_name: ["Tumor Core", "Whole Tumore", "Enhancing Tumor"]
   colors: ["#FFFFFF", "#FFFF1E", "#FF0000", "#007339"]

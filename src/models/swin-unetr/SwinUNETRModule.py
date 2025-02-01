@@ -170,12 +170,9 @@ class SwinUNETRModule(LightningModule):
         """
         loss, pred_masks, gt_masks = self.model_step(batch) # [1, 4, 128, 128, 128], [1, 3, 128, 128, 128]
             
-        labels_list = decollate_batch(gt_masks)
+        labels_list = decollate_batch(gt_masks) # len = len(batch)
         outputs_list = decollate_batch(pred_masks)
         outputs_convert =  [self.post_pred(self.post_sigmoid(pred_tensor)) for pred_tensor in outputs_list]    
-        
-        logging.info(f"Labels_list: {len(labels_list)}") 
-        logging.info(f"Outputs_convert: {len(outputs_convert)}") 
         
         # outputs_convert =  [self.post_pred(pred_tensor) for pred_tensor in outputs_list]
         # label_convert = [self.post_label(i) for i in labels_list]

@@ -10,6 +10,7 @@ from io import BytesIO
 from matplotlib.lines import Line2D
 from torchvision.utils import draw_segmentation_masks
 import cv2
+import scipy.ndimage as ndimage
 import matplotlib.colors as mcolors
 
 def custom_visualization(
@@ -21,6 +22,7 @@ def custom_visualization(
     class_names: list[str],
     colors: list[str],
     fig_size: tuple[int],
+    vis_pred: bool = True,
 ):
     # Custom frame_nums
     # ...
@@ -35,6 +37,7 @@ def custom_visualization(
         img_normalize=True,
         transparency=0.65,
         fig_size=fig_size,
+        vis_pred=vis_pred
     )
 
 def render_and_save_gridspec(
@@ -48,6 +51,7 @@ def render_and_save_gridspec(
     img_normalize: bool,
     transparency: float = 1.0,
     fig_size: tuple[int] = [2, 2],
+    vis_pred: bool = True,
 ):
     # plot setting
     rows = fig_size[0]
@@ -55,7 +59,10 @@ def render_and_save_gridspec(
     fig = plt.figure(figsize=(cols, rows))
     gs = gridspec.GridSpec(rows, cols, wspace=0.01, hspace=0.01)
     
-    pred_masks = [label, pred]
+    if vis_pred is False:
+        pred_masks = [label]
+    else:
+        pred_masks = [label, pred]
     # rendering a fig_size x fig_size grid plot.
     for row, frame_ind in enumerate(frame_nums):
         for col, pred_mask in enumerate(pred_masks):
@@ -209,3 +216,10 @@ def scale_image(image):
     scaled_image = (image - min_val) / (max_val - min_val) * 255
     
     return scaled_image.astype(np.uint8)
+
+def resample_3d(img, target_size):
+    imx, imy, imz = img.shape
+    tx, ty, tz = target_size
+    zoom_ratio = (float(tx) / float(imx), float(ty) / float(imy), float(tz) / float(imz))
+    img_resampled = ndimage.zoom(img, zoom_ratio, order=0, prefilter=False)
+    return img_resampled
