@@ -6,7 +6,7 @@ import numpy as np
 from lightning import LightningModule
 from torchmetrics import MaxMetric, MeanMetric
 from torchmetrics import Dice, JaccardIndex, MaxMetric, MeanMetric
-from monai.inferers import sliding_window_inference
+# from monai.inferers import sliding_window_inference
 from monai.transforms import (
     AsDiscrete,
     Activations,

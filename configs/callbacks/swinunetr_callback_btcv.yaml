@@ -28,12 +28,12 @@ wandb_callback:
   num_classes: 14 # including background
   case_names:
     [ 
-      '0001',
+      '0025',
       '0002',
       '0004',
       '0008', 
       '0022',
-      '0025', 
+      '0001', 
       '0029', 
       '0032',
       '0036',

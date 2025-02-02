@@ -1,7 +1,7 @@
 _target_: src.models.swin-unetr.SwinUNETR_btcv_module.SwinUNETR_BTCV_Module
 defaults:
   - criterion: dice_ce_loss_monai.yaml
-  - net: SwinUNETR.yaml
+  - net: UNETR.yaml
 
 optimizer:
   _target_: torch.optim.AdamW

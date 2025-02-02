@@ -13,9 +13,15 @@ import math
 import warnings
 from typing import List
 
+import logging
 from torch.optim import Adam, Optimizer
 from torch.optim.lr_scheduler import _LRScheduler
 
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(levelname)s - %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S"
+)
 
 class LinearWarmupCosineAnnealingLR(_LRScheduler):
     def __init__(
@@ -40,6 +46,8 @@ class LinearWarmupCosineAnnealingLR(_LRScheduler):
         self.max_epochs = max_epochs
         self.warmup_start_lr = warmup_start_lr
         self.eta_min = eta_min
+        
+        logging.info(f"Using LR Scheduler: LinearWarmupCosineAnnealingLR")
 
         super(LinearWarmupCosineAnnealingLR, self).__init__(optimizer, last_epoch)
 
