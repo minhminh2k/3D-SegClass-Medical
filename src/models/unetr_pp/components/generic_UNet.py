@@ -14,12 +14,12 @@
 
 
 from copy import deepcopy
-from unetr_pp.utilities.nd_softmax import softmax_helper
+from src.models.unetr_pp.utilities.nd_softmax import softmax_helper
 from torch import nn
 import torch
 import numpy as np
-from unetr_pp.network_architecture.initialization import InitWeights_He
-from unetr_pp.network_architecture.neural_network import SegmentationNetwork
+from src.models.unetr_pp.components.initialization import InitWeights_He
+from src.models.unetr_pp.components.neural_network import SegmentationNetwork
 import torch.nn.functional
 
 
