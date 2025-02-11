@@ -32,7 +32,7 @@ transforms:
     spatial_size: [96, 96, 96]
     pos: 1
     neg: 1
-    num_samples: 3
+    num_samples: 3 # number of cropped samples
     image_key: "image"
     image_threshold: 0
 
