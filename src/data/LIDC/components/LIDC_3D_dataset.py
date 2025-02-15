@@ -19,7 +19,6 @@ class LIDC_IDRI_3D_Dataset(Dataset):
         self, 
         data_nodule_dir: list[str],
         data_clean_dir: list[str],
-        data_list: list = [],
         transform: Callable | None = None
     ) -> None:
         """
@@ -30,7 +29,7 @@ class LIDC_IDRI_3D_Dataset(Dataset):
         """
         self.data_nodule_dir = data_nodule_dir
         self.data_clean_dir = data_clean_dir
-        self.data_list = self._get_file_list
+        self.data_list = self._get_file_list()
         
         try:
             self.transform = Compose(transform) if not isinstance(transform, Compose) else transform

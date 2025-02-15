@@ -1,15 +1,16 @@
 from typing import Any, Dict, Optional, Tuple
 
+import os
 import logging
 import torch
-from lightning import LightningDataModule
-from torch.utils.data import ConcatDataset, Dataset, random_split
-from torchvision.datasets import MNIST
-from torchvision.transforms import transforms
+import numpy as np
 
+from lightning import LightningDataModule
+from torch.utils.data import Dataset, random_split
 from monai.transforms import Compose
 from sklearn.model_selection import train_test_split
 from monai.data import DataLoader
+from src.data.LIDC.components.LIDC_3D_dataset import LIDC_IDRI_3D_Dataset
 
 logging.basicConfig(
     level=logging.INFO,
@@ -64,17 +65,17 @@ class LIDC_IDRI_3D_Datamodule(LightningDataModule):
 
     def __init__(
         self,
-        data_dir: str = "/data/hpc/dqm/data/brats-2021",
-        datalist_json: str = '/data/hpc/dqm/3D-SegClass-Medical/preprocess_data/swin-unetr/brats21/brats2021_folds.json',
-        train_val_test_split: Tuple[float, float, float] = (0.8, 0.1, 0.1),
-        fold: int = 0,
+        data_nodule_dir: str = "/data/hpc/dqm/lidc-preprocessing/data/Image",
+        data_clean_dir: str = "/data/hpc/dqm/lidc-preprocessing/data/Clean/Image",
+        train_val_test_split: Tuple[int, int, int] = (6, 2, 2),
         transform_train:  Optional[Compose] = None,
         transform_val:  Optional[Compose] = None,
-        batch_size: int = 4,
+        batch_size: int = 2,
         num_workers: int = 0,
         pin_memory: bool = False,
-        num_classes: int = 3,
-        samples: int = 1000,
+        num_nodule_samples: int = 1000,
+        num_clean_samples: int = 10000,
+        num_classes: int = 2,
     ) -> None:
         """Initialize a `MonAIBraTsDataModule`.
 
@@ -126,42 +127,71 @@ class LIDC_IDRI_3D_Datamodule(LightningDataModule):
         # load and split datasets only if not loaded already
         if not self.data_train and not self.data_val and not self.data_test:
             
-            train_dataset, val_dataset = datafold_read(
-                data_dir=self.hparams.data_dir,
-                datalist_json=self.hparams.datalist_json,
-                fold=self.hparams.fold
-            )
+            self.data_train, self.data_val, self.data_test = self._read_data_dir()
             
-            data_list = train_dataset + val_dataset
-            data_list = data_list[0:self.hparams.samples] \
-                if len(data_list) >= self.hparams.samples else data_list 
-            
-            train_data, val_test_data = train_test_split(
-                data_list,
-                train_size=self.hparams.train_val_test_split[0],
-                random_state=42
-            )
-            
-            val_data, test_data = train_test_split(
-                val_test_data,
-                train_size=self.hparams.train_val_test_split[1]
-                / (
-                    self.hparams.train_val_test_split[1] + self.hparams.train_val_test_split[2]
-                ),
-                random_state=42,
-            )
-            
-            self.data_train = BraTs21_Dataset(data_dir=self.hparams.data_dir, data_list=train_data, transform=self.hparams.transform_train)
-                        
-            # Transform Val
-            self.data_val = BraTs21_Dataset(data_dir=self.hparams.data_dir, data_list=val_data, transform=self.hparams.transform_val)
-            self.data_test = BraTs21_Dataset(data_dir=self.hparams.data_dir, data_list=test_data, transform=self.hparams.transform_val)
-            
-            logging.info(f"Full Dataset: {len(data_list)}")
-            logging.info("Train Val Test Split Dataset")
             logging.info(f"Train Dataset: {len(self.data_train)}")
             logging.info(f"Val Dataset: {len(self.data_val)}")
             logging.info(f"Test Dataset: {len(self.data_test)}")
+    
+    def _read_data_dir(self) -> list:
+        # Get all the data files
+
+        file_nodule_list = []
+        file_clean_list = []
+
+        # Get nodule files
+        for root, _, files in os.walk(self.hparams.data_nodule_dir):
+            for file in files:
+                if file.endswith(".npy"):
+                    dicom_path = os.path.join(root, file)
+                    file_nodule_list.append(dicom_path)
+        
+        # Get clean files
+        for root, _, files in os.walk(self.hparams.data_clean_dir):
+            for file in files:
+                if file.endswith(".npy"):
+                    dicom_path = os.path.join(root, file)
+                    file_clean_list.append(dicom_path)
+                    
+        file_nodule_list = file_nodule_list[:self.hparams.num_nodule_samples] \
+            if len(file_nodule_list) > self.hparams.num_nodule_samples else file_nodule_list
+        file_clean_list = file_clean_list[:self.hparams.num_clean_samples] \
+            if len(file_clean_list) > self.hparams.num_clean_samples else file_clean_list
+        
+        train_nodule_dir, val_nodule_dir, test_nodule_dir = self._split_data(
+            file_paths=file_nodule_list, train_val_test_split=self.hparams.train_val_test_split)
+        
+        train_clean_dir, val_clean_dir, test_clean_dir = self._split_data(
+            file_paths=file_clean_list, train_val_test_split=self.hparams.train_val_test_split)
+        
+        data_train = LIDC_IDRI_3D_Dataset(data_nodule_dir=train_nodule_dir, data_clean_dir=train_clean_dir, transform=self.hparams.transform_train)
+                        
+        # Transform Val
+        data_val = LIDC_IDRI_3D_Dataset(data_nodule_dir=val_nodule_dir, data_clean_dir=val_clean_dir, transform=self.hparams.transform_val)
+        data_test = LIDC_IDRI_3D_Dataset(data_nodule_dir=test_nodule_dir, data_clean_dir=test_clean_dir, transform=self.hparams.transform_val)
+        
+        return data_train, data_val, data_test
+        
+    
+    def _split_data(self, file_paths, train_val_test_split) -> Tuple[list, list, list]:
+        np.random.seed(42) # If needed
+        
+        # get len files
+        num_files = len(file_paths)
+        
+        # ratio
+        train_ratio, val_ratio, test_ratio = train_val_test_split
+        
+        # get num train, val, test
+        num_train = int(num_files * train_ratio / (train_ratio + val_ratio + test_ratio))
+        num_val = int(num_files * val_ratio / (train_ratio + val_ratio + test_ratio))
+        
+        # get random index
+        train_paths = list(np.random.choice(file_paths, num_train, replace=False))
+        val_paths = list(np.random.choice(list(set(file_paths) - set(train_paths)), num_val, replace=False))
+        test_paths = list(set(file_paths) - set(train_paths) - set(val_paths))
+        return train_paths, val_paths, test_paths
+        
 
     def train_dataloader(self) -> DataLoader: # DataLoader[Any]
         """Create and return the train dataloader.
