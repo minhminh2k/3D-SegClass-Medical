@@ -19,7 +19,7 @@ Pillow==11.0.0
 opencv-python==4.10.0.48
 albumentations==1.4.24
 imageio==2.36.1
-scipy==1.14.1
+scipy==1.15.2
 ipykernel==6.29.5
 einops==0.8.0
 
