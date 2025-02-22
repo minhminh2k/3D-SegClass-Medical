@@ -39,6 +39,29 @@ def custom_visualization(
         fig_size=fig_size,
         vis_pred=vis_pred
     )
+    
+def gif_visualization(
+    image: Any,
+    label: Any,
+    num_classes: int,
+    colors: list[str],
+    transparency: float = 0.4,
+):
+    visualize_volume = []
+    
+    for image_data, mask in zip(image, label):
+        overlayed_img = overlay(
+            image=image_data,
+            seg_mask=mask,
+            num_classes=num_classes,
+            colors=colors,
+            normalize=True,
+            transparency=transparency,
+        )
+        visualize_volume.append(overlayed_img)
+    
+    # return np.stack(visualize_volume, axis=0)
+    return visualize_volume
 
 def render_and_save_gridspec(
     image: Any,
@@ -126,7 +149,6 @@ def render_and_save_gridspec(
     return buffer
     # buffer.close()
     # prevent using excessive memory
-
 
 def overlay(
     image: np.ndarray,

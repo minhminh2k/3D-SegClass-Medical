@@ -1,0 +1,15 @@
+_target_: src.data.LIDC.LIDC_3D_datamodule.LIDC_IDRI_3D_Datamodule
+
+defaults:
+  - transform_train: lidc_3d.yaml
+  - transform_val: lidc_3d.yaml
+
+data_nodule_dir: "/data/hpc/dqm/lidc-preprocessing/data/Image"
+data_clean_dir: "/data/hpc/dqm/lidc-preprocessing/data/Clean/Image"
+train_val_test_split: [6, 2, 2]
+batch_size: 1
+num_workers: 2
+pin_memory: False
+num_nodule_samples: 20000
+num_clean_samples: 20000
+num_classes: 2

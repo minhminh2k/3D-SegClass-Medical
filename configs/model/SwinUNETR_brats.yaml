@@ -16,4 +16,4 @@ scheduler:
   
 # compile model for faster training with pytorch 2.0
 compile: false
-num_classes: 14 # including background
+num_classes: 2 # including background

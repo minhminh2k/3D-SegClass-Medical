@@ -1,0 +1,22 @@
+wandb_callback:
+  _target_: src.utils.callbacks.wandb_callback_lidc_3d.LIDC_3D_Callback
+  data_nodule_dir: "/data/hpc/dqm/lidc-preprocessing/data/Image"
+  data_clean_dir: "/data/hpc/dqm/lidc-preprocessing/data/Clean/Image"
+  classes_name: ["Lung Nodule"]
+  colors: ["#00FF00", "#FFFF1E", "#FF0000"]
+  n_images_to_log: 1
+  number_of_logged_samples: 2
+  roi_size: [128, 128, 128]
+  num_classes: 4
+  case_names:
+    [
+      "0068",
+      "0027",
+      "0050",
+      "0061",
+      "0074",
+      "0101",
+      "0117",
+    ]
+  
+  

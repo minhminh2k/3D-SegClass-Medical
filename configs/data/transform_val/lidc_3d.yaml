@@ -1,0 +1,14 @@
+_target_: monai.transforms.Compose
+
+transforms:
+  - _target_: monai.transforms.LoadImaged
+    keys: ["image", "label"]
+    ensure_channel_first: True
+
+  - _target_: monai.transforms.NormalizeIntensityd
+    keys: "image"
+    nonzero: True
+    channel_wise: True
+  
+  - _target_: monai.transforms.ToTensord
+    keys: ["image", "label"]

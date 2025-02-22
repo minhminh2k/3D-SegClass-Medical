@@ -2,11 +2,9 @@ from typing import Any, Dict, Tuple, List
 
 import torch
 import logging
-import numpy as np
 from lightning import LightningModule
 from torchmetrics import MaxMetric, MeanMetric
 from torchmetrics import Dice, JaccardIndex, MaxMetric, MeanMetric
-# from monai.inferers import sliding_window_inference
 from monai.transforms import (
     AsDiscrete,
     Activations,
@@ -14,9 +12,6 @@ from monai.transforms import (
 from monai.data import decollate_batch
 from monai.metrics import DiceMetric
 from monai.utils.enums import MetricReduction
-from functools import partial
-
-# References: https://github.com/Project-MONAI/research-contributions/tree/main/SwinUNETR/BRATS21
 
 logging.basicConfig(
     level=logging.INFO,
@@ -24,8 +19,8 @@ logging.basicConfig(
     datefmt="%Y-%m-%d %H:%M:%S"
 )
 
-class SwinUNETRModule(LightningModule):
-    """Example of a `LightningModule` for Fine-tuning SAM.
+class SwinUNETR_LIDC_Module(LightningModule):
+    """Example of a `LightningModule` for LIDC 3D.
 
     A `LightningModule` implements 8 key methods:
 
@@ -67,7 +62,7 @@ class SwinUNETRModule(LightningModule):
         roi_size: Tuple[int, int, int] = [128, 128, 128],
         sw_batch_size: int = 4,
         infer_overlap: float = 0.5,
-        num_classes: int = 4,
+        num_classes: int = 2,
     ) -> None:
         """Initialize a `MNISTLitModule`.
 
@@ -90,27 +85,14 @@ class SwinUNETRModule(LightningModule):
         self.post_sigmoid = Activations(sigmoid=True)
         self.post_pred = AsDiscrete(argmax=False, threshold=0.5)
         
-        # Post processing for many classes
-        # self.post_pred = AsDiscrete(argmax=True, to_onehot=self.hparams.num_classes)
-        # self.post_label = AsDiscrete(to_onehot=self.hparams.num_classes)
-        
-        # Not use
-        # self.model_inferer = partial(
-        #     sliding_window_inference,
-        #     roi_size=[self.hparams.roi_size[0], self.hparams.roi_size[1], self.hparams.roi_size[2]],
-        #     sw_batch_size=self.hparams.sw_batch_size,
-        #     predictor=self.forward,
-        #     overlap=self.hparams.infer_overlap,
-        # )
-        
         # metric objects for calculating and averaging accuracy across batches
         self.train_metric = DiceMetric(include_background=True, reduction=MetricReduction.MEAN_BATCH, get_not_nans=True)
         self.val_metric = DiceMetric(include_background=True, reduction=MetricReduction.MEAN_BATCH, get_not_nans=True)
         self.test_metric = DiceMetric(include_background=True, reduction=MetricReduction.MEAN_BATCH, get_not_nans=True)
         
-        # self.train_metric = Dice(average='macro', num_classes=self.hparams.num_classes, ignore_index=0) # ignore background
-        # self.val_metric = Dice(average='macro', num_classes=self.hparams.num_classes, ignore_index=0)
-        # self.test_metric = Dice(average='macro', num_classes=self.hparams.num_classes, ignore_index=0)
+        # self.train_metric = Dice(average='micro', num_classes=self.hparams.num_classes) # , ignore_index=0)
+        # self.val_metric = Dice(average='micro', num_classes=self.hparams.num_classes) # , ignore_index=0)
+        # self.test_metric = Dice(average='micro', num_classes=self.hparams.num_classes) # , ignore_index=0)
 
         # for averaging loss across batches
         self.train_loss = MeanMetric()
@@ -149,8 +131,11 @@ class SwinUNETRModule(LightningModule):
             - A tensor of predictions.
             - A tensor of target labels.
         """
-        image, target = batch["image"], batch["label"] # [batch, 4, 128, 128, 128], [batch, 3, 128, 128, 128]                
-        logits = self.forward(image) # [batch, 3, 128, 128, 128]
+        # B C H W D
+        image, target = batch["image"], batch["label"] # [batch, 1, 128, 128, 128], [batch, 1, 128, 128, 128]
+        # Image: -0.5 -> 2x
+                
+        logits = self.forward(image) # [batch, 1, 128, 128, 128]
         
         loss = self.criterion(logits, target)
         return loss, logits, target
@@ -165,33 +150,28 @@ class SwinUNETRModule(LightningModule):
         :param batch_idx: The index of the current batch.
         :return: A tensor of losses between model predictions and targets.
         """
-        loss, pred_masks, gt_masks = self.model_step(batch) # [1, 4, 128, 128, 128], [1, 3, 128, 128, 128]
+        loss, pred_masks, gt_masks = self.model_step(batch)
             
-        labels_list = decollate_batch(gt_masks) # len = len(batch)
+        labels_list = decollate_batch(gt_masks)
         outputs_list = decollate_batch(pred_masks)
         outputs_convert =  [self.post_pred(self.post_sigmoid(pred_tensor)) for pred_tensor in outputs_list]    
-        
-        # outputs_convert =  [self.post_pred(pred_tensor) for pred_tensor in outputs_list]
-        # label_convert = [self.post_label(i) for i in labels_list]
         
         # update and log metrics
         self.train_loss(loss)
         train_dice = self.train_metric(y_pred=outputs_convert, y=labels_list)
-        
+                
         self.log("train/loss", self.train_loss, on_step=False, on_epoch=True, prog_bar=True)
-        self.log("train/dice", train_dice[0, 1], on_step=False, on_epoch=True, prog_bar=True) # Whole tumor
+        self.log("train/dice", train_dice[0][0], on_step=False, on_epoch=True, prog_bar=True)
 
         # return loss or backpropagation will fail
         return loss
 
     def on_train_epoch_end(self) -> None:
         "Lightning hook that is called when a training epoch ends."
-        acc1, _ = self.train_metric.aggregate()  # get current val acc
-        dice_tc, dice_wt, dice_et = acc1[0:3]
-        
+        acc1, _ = self.train_metric.aggregate()  # get current val acc        
         self.train_metric.reset()
         
-        self.log("train/dice_epoch", dice_wt, sync_dist=True, prog_bar=True)
+        self.log("train/dice_epoch", acc1, sync_dist=True, prog_bar=True)
 
     def validation_step(self, batch: Tuple[torch.Tensor, torch.Tensor], batch_idx: int) -> None:
         """Perform a single validation step on a batch of data from the validation set.
@@ -200,45 +180,30 @@ class SwinUNETRModule(LightningModule):
             labels.
         :param batch_idx: The index of the current batch.
         """
-        loss, pred_masks, labels = self.model_step(batch) # [1, 3, 128, 128, 128], ([1, 3, 128, 128, 128
+        loss, pred_masks, labels = self.model_step(batch)
 
-        # images, labels = batch["image"], batch["label"]
-        # pred_masks = sliding_window_inference(
-        #     images,
-        #     [self.hparams.roi_size[0], self.hparams.roi_size[1], self.hparams.roi_size[2]],
-        #     self.hparams.sw_batch_size,
-        #     self.forward,
-        #     overlap=self.hparams.infer_overlap
-        # )
-        # pred_masks = self.model_inferer(images)
-        
         loss = self.criterion(pred_masks, labels)
         
         labels_list = decollate_batch(labels)
         outputs_list = decollate_batch(pred_masks)
         
         outputs_convert =  [self.post_pred(self.post_sigmoid(pred_tensor)) for pred_tensor in outputs_list]
-       
-        # outputs_convert =  [self.post_pred(pred_tensor) for pred_tensor in outputs_list]
-        # label_convert = [self.post_label(i) for i in labels_list]
-        
+
         # update and log metrics
         self.val_loss(loss) 
-        val_dice = self.val_metric(y_pred=outputs_convert, y=labels_list) # label_convert
-        logging.info(f"Val Dice Step {val_dice}")
+        val_dice = self.val_metric(y_pred=outputs_convert, y=labels_list) 
         
         self.log("val/loss", self.val_loss, on_step=False, on_epoch=True, prog_bar=True)
-        self.log("val/dice", val_dice[0, 1], on_step=False, on_epoch=True, prog_bar=True)
+        self.log("val/dice", val_dice[0][0], on_step=False, on_epoch=True, prog_bar=True)
         
         return {"loss": loss, "preds": pred_masks, "targets": labels}
         
     def on_validation_epoch_end(self) -> None:
         "Lightning hook that is called when a validation epoch ends."
         acc1, _ = self.val_metric.aggregate()  # get current val acc
-        dice_tc, dice_wt, dice_et = acc1[0:3]
         self.val_metric.reset()
         
-        self.val_metric_best(dice_wt)  # update best so far val acc
+        self.val_metric_best(acc1)  # update best so far val acc
 
         # log `val_acc_best` as a value through `.compute()` method, instead of as a metric object
         # otherwise metric would be reset by lightning after each epoch
@@ -254,24 +219,11 @@ class SwinUNETRModule(LightningModule):
         """
         loss, pred_masks, labels = self.model_step(batch)
         
-        # images, labels = batch["image"], batch["label"]
-        # pred_masks = sliding_window_inference(
-        #     images,
-        #     [self.hparams.roi_size[0], self.hparams.roi_size[1], self.hparams.roi_size[2]],
-        #     self.hparams.sw_batch_size,
-        #     self.forward,
-        #     overlap=self.hparams.infer_overlap
-        # )
-        # pred_masks = self.model_inferer(images)
-        
         loss = self.criterion(pred_masks, labels)
         
         labels_list = decollate_batch(labels)
         outputs_list = decollate_batch(pred_masks)
         outputs_convert =  [self.post_pred(self.post_sigmoid(pred_tensor)) for pred_tensor in outputs_list]
-        
-        # outputs_convert =  [self.post_pred(pred_tensor) for pred_tensor in outputs_list]
-        # label_convert = [self.post_label(i) for i in labels_list]
 
         # update and log metrics
         self.test_loss(loss)
@@ -279,18 +231,16 @@ class SwinUNETRModule(LightningModule):
         
         self.log("test/loss", self.test_loss, on_step=False, on_epoch=True, prog_bar=True)
         
-        self.log("test/dice", test_dice[0, 1], on_step=False, on_epoch=True, prog_bar=True) # whole tumor
+        self.log("test/dice", test_dice[0][0], on_step=False, on_epoch=True, prog_bar=True) # whole tumor
         
         return {"loss": loss, "preds": pred_masks, "targets": labels}
         
     def on_test_epoch_end(self) -> None:
         """Lightning hook that is called when a test epoch ends."""
         acc1, _ = self.test_metric.aggregate()  # get current val acc
-        dice_tc, dice_wt, dice_et = acc1[0:3]
-
         self.test_metric.reset()
         
-        self.test_metric_best(dice_wt)
+        self.test_metric_best(acc1)
         
         self.log("test/dice_best", self.test_metric_best.compute(), sync_dist=True, prog_bar=True)
 

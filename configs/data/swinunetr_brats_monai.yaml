@@ -5,11 +5,11 @@ defaults:
   - transform_val: swinunetr_brats.yaml
 
 data_dir: /data/hpc/dqm/data/brats-2021
-datalist_json: /data/hpc/dqm/3D-SegClass-Medical/preprocess_data/swin-unetr/brats21/brats2021_folds.json
-batch_size: 1 # Needs to be divisible by the number of devices (e.g., if in a distributed setup)
+datalist_json: /data/hpc/dqm/3D-SegClass-Medical/preprocess_data/jsons/brats21/brats2021_folds.json
+batch_size: 2 # Needs to be divisible by the number of devices (e.g., if in a distributed setup)
 train_val_test_split: [0.8, 0.1, 0.1]
 fold: 0
 num_workers: 2
 pin_memory: False
 num_classes: 4
-samples: 1500
+samples: 10 # 1500
