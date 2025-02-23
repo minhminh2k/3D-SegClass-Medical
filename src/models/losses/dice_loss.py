@@ -1,10 +1,19 @@
 import torch
 from torch import nn
 import torch.nn.functional as F
-
+from monai import losses
 """
 Implementation of Dice Loss from https://github.com/Mr-TalhaIlyas/Loss-Functions-Package-Tensorflow-Keras-PyTorch
 """
+
+class DiceLossMonAI(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self._loss = losses.DiceLoss(to_onehot_y=False, sigmoid=True)
+
+    def forward(self, predicted, target):
+        loss = self._loss(predicted, target)
+        return loss
 
 class DiceLoss(nn.Module):
     def __init__(self):
