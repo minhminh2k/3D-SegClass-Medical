@@ -1,4 +1,4 @@
-_target_: monai.losses.DiceLoss
+_target_: monai.losses.DiceCELoss
 
 to_onehot_y: True
 softmax: True

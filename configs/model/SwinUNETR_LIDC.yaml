@@ -1,7 +1,7 @@
 _target_: src.models.swin-unetr.SwinUNETR_LIDC_module.SwinUNETR_LIDC_Module
 defaults:
   - criterion: diceloss_monai.yaml
-  - net: SwinUNETR.yaml
+  - net: UNETR.yaml
 
 optimizer:
   _target_: torch.optim.AdamW

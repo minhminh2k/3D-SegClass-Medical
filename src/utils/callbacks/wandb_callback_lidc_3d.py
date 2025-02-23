@@ -59,7 +59,8 @@ class LIDC_3D_Callback(Callback):
         self.transform = Compose(
             [
                 transforms.LoadImaged(keys=["image", "label"], ensure_channel_first=True),
-                transforms.NormalizeIntensityd(keys="image", nonzero=True, channel_wise=True),
+                # transforms.NormalizeIntensityd(keys="image", nonzero=True),
+                transforms.ScaleIntensityRanged(keys=["image"], a_min=-1000, a_max=400, b_min=0.0, b_max=1.0, clip=True),
                 transforms.ToTensord(keys=["image", "label"])
             ]
         )

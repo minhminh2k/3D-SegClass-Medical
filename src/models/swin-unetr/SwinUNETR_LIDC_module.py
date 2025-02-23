@@ -133,8 +133,9 @@ class SwinUNETR_LIDC_Module(LightningModule):
         """
         # B C H W D
         image, target = batch["image"], batch["label"] # [batch, 1, 128, 128, 128], [batch, 1, 128, 128, 128]
-        # Image: -0.5 -> 2x
-                
+        # Image: -0.5 -> 2x -> NormalizeIntensity
+        # Randscale: 0.0 -> 1.0
+                        
         logits = self.forward(image) # [batch, 1, 128, 128, 128]
         
         loss = self.criterion(logits, target)
