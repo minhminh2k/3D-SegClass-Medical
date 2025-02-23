@@ -1,7 +1,9 @@
 _target_: monai.losses.DiceCELoss
 
-to_onehot_y: True
-softmax: True
-squared_pred: False
-# smooth_nr: 0.0 # If squared_dice
-# smooth_dr: 0.000001 # If squared_dice
+sigmoid: True
+softmax: False
+squared_pred: True
+smooth_nr: 0.00001
+smooth_dr: 0.00001
+lambda_dice: 0.5
+lambda_ce: 0.5

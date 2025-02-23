@@ -86,9 +86,9 @@ class SwinUNETR_LIDC_Module(LightningModule):
         self.post_pred = AsDiscrete(argmax=False, threshold=0.5)
         
         # metric objects for calculating and averaging accuracy across batches
-        self.train_metric = DiceMetric(include_background=True, reduction=MetricReduction.MEAN_BATCH, get_not_nans=True)
-        self.val_metric = DiceMetric(include_background=True, reduction=MetricReduction.MEAN_BATCH, get_not_nans=True)
-        self.test_metric = DiceMetric(include_background=True, reduction=MetricReduction.MEAN_BATCH, get_not_nans=True)
+        self.train_metric = DiceMetric(include_background=False, reduction=MetricReduction.MEAN)
+        self.val_metric = DiceMetric(include_background=False, reduction=MetricReduction.MEAN)
+        self.test_metric = DiceMetric(include_background=False, reduction=MetricReduction.MEAN)
         
         # self.train_metric = Dice(average='micro', num_classes=self.hparams.num_classes) # , ignore_index=0)
         # self.val_metric = Dice(average='micro', num_classes=self.hparams.num_classes) # , ignore_index=0)
@@ -160,7 +160,9 @@ class SwinUNETR_LIDC_Module(LightningModule):
         # update and log metrics
         self.train_loss(loss)
         train_dice = self.train_metric(y_pred=outputs_convert, y=labels_list)
-                
+        
+        logging.info(f"Training Step: {train_dice}")
+        
         self.log("train/loss", self.train_loss, on_step=False, on_epoch=True, prog_bar=True)
         self.log("train/dice", train_dice[0][0], on_step=False, on_epoch=True, prog_bar=True)
 
@@ -169,7 +171,7 @@ class SwinUNETR_LIDC_Module(LightningModule):
 
     def on_train_epoch_end(self) -> None:
         "Lightning hook that is called when a training epoch ends."
-        acc1, _ = self.train_metric.aggregate().item()  # get current val acc        
+        acc1 = self.train_metric.aggregate().item()  # get current val acc        
         self.train_metric.reset()
         
         self.log("train/dice_epoch", acc1, sync_dist=True, prog_bar=True)
@@ -203,9 +205,9 @@ class SwinUNETR_LIDC_Module(LightningModule):
         
     def on_validation_epoch_end(self) -> None:
         "Lightning hook that is called when a validation epoch ends."
-        acc1, _ = self.val_metric.aggregate().item()  # get current val acc
+        acc1 = self.val_metric.aggregate().item()  # get current val acc
         
-        logging.info(f"Validation epoch end: {acc1}, {_}")
+        logging.info(f"Validation epoch end: {acc1}")
         
         self.val_metric.reset()
         
@@ -243,7 +245,7 @@ class SwinUNETR_LIDC_Module(LightningModule):
         
     def on_test_epoch_end(self) -> None:
         """Lightning hook that is called when a test epoch ends."""
-        acc1, _ = self.test_metric.aggregate().item()  # get current val acc
+        acc1 = self.test_metric.aggregate().item()  # get current val acc
         self.test_metric.reset()
         
         self.test_metric_best(acc1)

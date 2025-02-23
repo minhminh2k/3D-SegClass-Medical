@@ -1,13 +1,13 @@
 _target_: src.models.swin-unetr.SwinUNETR_LIDC_module.SwinUNETR_LIDC_Module
 defaults:
-  - criterion: diceloss_monai.yaml
+  - criterion: dice_ce_loss_monai.yaml
   - net: UNETR.yaml
 
 optimizer:
   _target_: torch.optim.AdamW
   _partial_: true
   lr: 0.0001
-  weight_decay: 0.001
+  weight_decay: 0.0001
 
 scheduler:
   _target_: torch.optim.lr_scheduler.CosineAnnealingLR
