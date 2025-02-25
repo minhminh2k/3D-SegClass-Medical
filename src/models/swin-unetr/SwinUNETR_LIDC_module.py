@@ -161,7 +161,7 @@ class SwinUNETR_LIDC_Module(LightningModule):
         self.train_loss(loss)
         train_dice = self.train_metric(y_pred=outputs_convert, y=labels_list)
         
-        logging.info(f"Training Step: {train_dice}")
+        # logging.info(f"Training Step: {train_dice}") # Ex: tensor([[0.6667]], device='cuda:0')
         
         self.log("train/loss", self.train_loss, on_step=False, on_epoch=True, prog_bar=True)
         self.log("train/dice", train_dice[0][0], on_step=False, on_epoch=True, prog_bar=True)
@@ -195,9 +195,7 @@ class SwinUNETR_LIDC_Module(LightningModule):
         # update and log metrics
         self.val_loss(loss) 
         val_dice = self.val_metric(y_pred=outputs_convert, y=labels_list)
-        
-        logging.info(f"Validation step: {val_dice}")
-        
+                
         self.log("val/loss", self.val_loss, on_step=False, on_epoch=True, prog_bar=True)
         self.log("val/dice", val_dice[0][0], on_step=False, on_epoch=True, prog_bar=True)
         
@@ -206,9 +204,7 @@ class SwinUNETR_LIDC_Module(LightningModule):
     def on_validation_epoch_end(self) -> None:
         "Lightning hook that is called when a validation epoch ends."
         acc1 = self.val_metric.aggregate().item()  # get current val acc
-        
-        logging.info(f"Validation epoch end: {acc1}")
-        
+                
         self.val_metric.reset()
         
         self.val_metric_best(acc1)  # update best so far val acc

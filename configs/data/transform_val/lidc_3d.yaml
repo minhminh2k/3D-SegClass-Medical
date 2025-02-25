@@ -4,18 +4,32 @@ transforms:
   - _target_: monai.transforms.LoadImaged
     keys: ["image", "label"]
     ensure_channel_first: True
+  
+  - _target_: monai.transforms.Resized
+    keys: ["image", "label"]
+    spatial_size: [128, 128, 128]
+    mode: ["trilinear", "nearest"]
 
-  - _target_: monai.transforms.ScaleIntensityRanged
-    keys: ["image"]
-    a_min: -1000
-    a_max: 400
-    b_min: 0.0
-    b_max: 1.0
-    clip: True
+  # - _target_: monai.transforms.RandCropByPosNegLabeld
+  #   keys: ["image", "label"]
+  #   label_key: "label"
+  #   spatial_size: [128, 128, 128]
+  #   pos: 3
+  #   neg: 1
+  #   num_samples: 4 # number of cropped samples
+  #   image_key: "image"
+  #   image_threshold: 0
 
-  # - _target_: monai.transforms.NormalizeIntensityd
-  #   keys: "image"
-  #   nonzero: True
+  # - _target_: monai.transforms.ScaleIntensityRanged
+  #   keys: ["image"]
+  #   a_min: -1000
+  #   a_max: 400
+  #   b_min: 0.0
+  #   b_max: 1.0
+  #   clip: True
+
+  - _target_: monai.transforms.NormalizeIntensityd
+    keys: "image"
   
   - _target_: monai.transforms.ToTensord
     keys: ["image", "label"]

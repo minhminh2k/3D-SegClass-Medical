@@ -1,6 +1,7 @@
 import os
 from typing import Any
 
+import random
 import torch
 import wandb
 import logging
@@ -55,12 +56,19 @@ class LIDC_3D_Callback(Callback):
             'image': f'{self.data_nodule_dir}/LIDC-IDRI-{i}/{i}_NI001.npy',
             'label': f'{self.data_nodule_dir}/LIDC-IDRI-{i}/{i}_MA001.npy'.replace('Image', 'Mask')
         } for i in self.case_names]
+        
+        self.image_dict = random.sample(self.image_dict, len(self.image_dict))
 
         self.transform = Compose(
             [
                 transforms.LoadImaged(keys=["image", "label"], ensure_channel_first=True),
-                # transforms.NormalizeIntensityd(keys="image", nonzero=True),
-                transforms.ScaleIntensityRanged(keys=["image"], a_min=-1000, a_max=400, b_min=0.0, b_max=1.0, clip=True),
+                transforms.NormalizeIntensityd(keys="image"),
+                transforms.Resized(
+                    keys=["image", "label"],
+                    spatial_size=(128, 128, 128),
+                    mode=("trilinear", "nearest"),  # Image: trilinear, Label: nearest-neighbor
+                ),
+                # transforms.ScaleIntensityRanged(keys=["image"], a_min=-1000, a_max=400, b_min=0.0, b_max=1.0, clip=True),
                 transforms.ToTensord(keys=["image", "label"])
             ]
         )
