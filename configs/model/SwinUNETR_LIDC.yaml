@@ -1,12 +1,13 @@
 _target_: src.models.swin-unetr.SwinUNETR_LIDC_module.SwinUNETR_LIDC_Module
 defaults:
   - criterion: dice_ce_loss_monai.yaml
-  - net: UNETR.yaml
+  - net: SwinUNETR.yaml
+  - scheduler: warmup_cosine.yaml
 
 optimizer:
   _target_: torch.optim.AdamW
   _partial_: true
-  lr: 0.0001
+  lr: 0.00004
   weight_decay: 0.0001
 
 scheduler:
