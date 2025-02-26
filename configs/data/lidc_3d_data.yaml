@@ -4,10 +4,10 @@ defaults:
   - transform_train: lidc_3d.yaml
   - transform_val: lidc_3d.yaml
 
-# data_nodule_dir: "/data/hpc/dqm/lidc-preprocessing/data/Image"
-# data_clean_dir: "/data/hpc/dqm/lidc-preprocessing/data/Clean/Image"
-data_nodule_dir: "/data/hpc/dqm/3D-SegClass-Medical/data/Image"
-data_clean_dir: "/data/hpc/dqm/3D-SegClass-Medical/data/Clean/Image"
+data_nodule_dir: "/data/hpc/dqm/lidc-preprocessing/data/Image"
+data_clean_dir: "/data/hpc/dqm/lidc-preprocessing/data/Clean/Image"
+# data_nodule_dir: "/data/hpc/dqm/3D-SegClass-Medical/data/Image"
+# data_clean_dir: "/data/hpc/dqm/3D-SegClass-Medical/data/Clean/Image"
 train_val_test_split: [70, 15, 15]
 batch_size: 1
 num_workers: 2

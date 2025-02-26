@@ -10,10 +10,10 @@ optimizer:
   lr: 0.00004
   weight_decay: 0.0001
 
-scheduler:
-  _target_: torch.optim.lr_scheduler.CosineAnnealingLR
-  _partial_: true
-  T_max: ${trainer.max_epochs}
+# scheduler:
+#   _target_: torch.optim.lr_scheduler.CosineAnnealingLR
+#   _partial_: true
+#   T_max: ${trainer.max_epochs}
   
 # compile model for faster training with pytorch 2.0
 compile: false
