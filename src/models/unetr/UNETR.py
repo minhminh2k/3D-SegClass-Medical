@@ -11,9 +11,8 @@
 
 from __future__ import annotations
 
-from collections.abc import Sequence
-
 import torch.nn as nn
+from collections.abc import Sequence
 
 from monai.networks.blocks.dynunet_block import UnetOutBlock
 from monai.networks.blocks.unetr_block import UnetrBasicBlock, UnetrPrUpBlock, UnetrUpBlock

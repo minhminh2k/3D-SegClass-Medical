@@ -17,6 +17,7 @@ class ContiguousGrad(torch.autograd.Function):
     @staticmethod
     def forward(ctx, x):
         return x
+    
     @staticmethod
     def backward(ctx, grad_out):
         return grad_out.contiguous()
@@ -58,13 +59,23 @@ def window_reverse(windows, window_size, S, H, W):
     return x
 
 
-
 class SwinTransformerBlock_kv(nn.Module):
-
-
-    def __init__(self, dim, input_resolution, num_heads, window_size=7, shift_size=0,
-                 mlp_ratio=4., qkv_bias=True, qk_scale=None, drop=0., attn_drop=0., drop_path=0.,
-                 act_layer=nn.GELU, norm_layer=nn.LayerNorm):
+    def __init__(
+        self, 
+        dim, 
+        input_resolution, 
+        num_heads,
+        window_size=7, 
+        shift_size=0,
+        mlp_ratio=4.0, 
+        qkv_bias=True, 
+        qk_scale=None, 
+        drop=0.0, 
+        attn_drop=0.0, 
+        drop_path=0.0,
+        act_layer=nn.GELU, 
+        norm_layer=nn.LayerNorm
+    ):
         super().__init__()
         self.dim = dim
         self.input_resolution = input_resolution
@@ -155,7 +166,16 @@ class SwinTransformerBlock_kv(nn.Module):
         
 class WindowAttention_kv(nn.Module):
    
-    def __init__(self, dim, window_size, num_heads, qkv_bias=True, qk_scale=None, attn_drop=0., proj_drop=0.):
+    def __init__(
+        self, 
+        dim, 
+        window_size, 
+        num_heads,
+        qkv_bias=True, 
+        qk_scale=None, 
+        attn_drop=0.0, 
+        proj_drop=0.0
+    ):
 
         super().__init__()
         self.dim = dim
@@ -233,7 +253,16 @@ class WindowAttention_kv(nn.Module):
 
 class WindowAttention(nn.Module):
 
-    def __init__(self, dim, window_size, num_heads, qkv_bias=True, qk_scale=None, attn_drop=0., proj_drop=0.):
+    def __init__(
+        self,
+        dim,
+        window_size,
+        num_heads,
+        qkv_bias=True,
+        qk_scale=None,
+        attn_drop=0.0,
+        proj_drop=0.0
+    ):
 
         super().__init__()
         self.dim = dim
@@ -445,23 +474,24 @@ class Patch_Expanding(nn.Module):
         x=x.permute(0,2,3,4,1).contiguous().view(B,-1,C//2)
        
         return x
+
 class BasicLayer(nn.Module):
-   
-    def __init__(self,
-                 dim,
-                 input_resolution,
-                 depth,
-                 num_heads,
-                 window_size=7,
-                 mlp_ratio=4.,
-                 qkv_bias=True,
-                 qk_scale=None,
-                 drop=0.,
-                 attn_drop=0.,
-                 drop_path=0.,
-                 norm_layer=nn.LayerNorm,
-                 downsample=True
-                 ):
+    def __init__(
+        self,
+        dim,
+        input_resolution,
+        depth,
+        num_heads,
+        window_size=7,
+        mlp_ratio=4.,
+        qkv_bias=True,
+        qk_scale=None,
+        drop=0.,
+        attn_drop=0.,
+        drop_path=0.,
+        norm_layer=nn.LayerNorm,
+        downsample=True
+    ):
         super().__init__()
         self.window_size = window_size
         self.shift_size = window_size // 2
@@ -702,24 +732,25 @@ class PatchEmbed(nn.Module):
 
 class Encoder(nn.Module):
    
-    def __init__(self,
-                 pretrain_img_size=224,
-                 patch_size=4,
-                 in_chans=1  ,
-                 embed_dim=96,
-                 depths=[2, 2, 2, 2],
-                 num_heads=[4, 8, 16, 32],
-                 window_size=7,
-                 mlp_ratio=4.,
-                 qkv_bias=True,
-                 qk_scale=None,
-                 drop_rate=0.,
-                 attn_drop_rate=0.,
-                 drop_path_rate=0.2,
-                 norm_layer=nn.LayerNorm,
-                 patch_norm=True,
-                 out_indices=(0, 1, 2, 3)
-                 ):
+    def __init__(
+        self,
+        pretrain_img_size=224,
+        patch_size=4,
+        in_chans=1  ,
+        embed_dim=96,
+        depths=[2, 2, 2, 2],
+        num_heads=[4, 8, 16, 32],
+        window_size=7,
+        mlp_ratio=4.,
+        qkv_bias=True,
+        qk_scale=None,
+        drop_rate=0.,
+        attn_drop_rate=0.,
+        drop_path_rate=0.2,
+        norm_layer=nn.LayerNorm,
+        patch_norm=True,
+        out_indices=(0, 1, 2, 3)
+    ):
         super().__init__()
 
         self.pretrain_img_size = pretrain_img_size
@@ -802,21 +833,22 @@ class Encoder(nn.Module):
    
 
 class Decoder(nn.Module):
-    def __init__(self,
-                 pretrain_img_size,
-                 embed_dim,
-                 patch_size=4,
-                 depths=[2,2,2],
-                 num_heads=[24,12,6],
-                 window_size=4,
-                 mlp_ratio=4.,
-                 qkv_bias=True,
-                 qk_scale=None,
-                 drop_rate=0.,
-                 attn_drop_rate=0.,
-                 drop_path_rate=0.2,
-                 norm_layer=nn.LayerNorm
-                 ):
+    def __init__(
+        self,
+        pretrain_img_size,
+        embed_dim,
+        patch_size=4,
+        depths=[2,2,2],
+        num_heads=[24,12,6],
+        window_size=4,
+        mlp_ratio=4.0,
+        qkv_bias=True,
+        qk_scale=None,
+        drop_rate=0.0,
+        attn_drop_rate=0.0,
+        drop_path_rate=0.2,
+        norm_layer=nn.LayerNorm
+    ):
         super().__init__()
         
 
@@ -882,35 +914,30 @@ class final_patch_expanding(nn.Module):
         
         return x    
 
-
-
-
                                          
 class nnFormer(SegmentationNetwork):
 
-    def __init__(self, crop_size=[64,128,128],
-                embedding_dim=192,
-                input_channels=1, 
-                num_classes=14, 
-                conv_op=nn.Conv3d, 
-                depths=[2,2,2,2],
-                num_heads=[6, 12, 24, 48],
-                patch_size=[2,4,4],
-                window_size=[4,4,8,4],
-                deep_supervision=True):
+    def __init__(
+        self, 
+        crop_size=[64, 128, 128],
+        embedding_dim=192,
+        input_channels=1, 
+        num_classes=14, 
+        conv_op=nn.Conv3d, 
+        depths=[2, 2, 2, 2],
+        num_heads=[6, 12, 24, 48],
+        patch_size=[2, 4, 4],
+        window_size=[4, 4, 8, 4], # [8, 8, 6, 4]
+        deep_supervision=True
+    ):
       
         super(nnFormer, self).__init__()
-        
-        
         self._deep_supervision = deep_supervision
         self.do_ds = deep_supervision
         self.num_classes=num_classes
         self.conv_op=conv_op
        
-        
         self.upscale_logits_ops = []
-     
-        
         self.upscale_logits_ops.append(lambda x: x)
         
         embed_dim=embedding_dim
@@ -918,8 +945,22 @@ class nnFormer(SegmentationNetwork):
         num_heads=num_heads
         patch_size=patch_size
         window_size=window_size
-        self.model_down=Encoder(pretrain_img_size=crop_size,window_size=window_size,embed_dim=embed_dim,patch_size=patch_size,depths=depths,num_heads=num_heads,in_chans=input_channels)
-        self.decoder=Decoder(pretrain_img_size=crop_size,embed_dim=embed_dim,window_size=window_size[::-1][1:],patch_size=patch_size,num_heads=num_heads[::-1][:-1],depths=depths[::-1][1:])
+        self.model_down=Encoder(
+            pretrain_img_size=crop_size,
+            window_size=window_size,
+            embed_dim=embed_dim,
+            patch_size=patch_size,
+            depths=depths,
+            num_heads=num_heads,
+            in_chans=input_channels
+        )
+        self.decoder=Decoder(
+            pretrain_img_size=crop_size,
+            embed_dim=embed_dim,
+            window_size=window_size[::-1][1:],
+            patch_size=patch_size,
+            num_heads=num_heads[::-1][:-1],
+            depths=depths[::-1][1:])
         
         self.final=[]
         if self.do_ds:
@@ -930,25 +971,20 @@ class nnFormer(SegmentationNetwork):
         else:
             self.final.append(final_patch_expanding(embed_dim,num_classes,patch_size=patch_size))
     
-        self.final=nn.ModuleList(self.final)
+        self.final = nn.ModuleList(self.final)
     
 
     def forward(self, x):
-      
-            
         seg_outputs=[]
         skips = self.model_down(x)
         neck=skips[-1]
        
         out=self.decoder(neck,skips)
         
-       
-            
         if self.do_ds:
             for i in range(len(out)):  
                 seg_outputs.append(self.final[-(i+1)](out[i]))
         
-          
             return seg_outputs[::-1]
         else:
             seg_outputs.append(self.final[0](out[-1]))
