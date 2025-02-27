@@ -1,8 +1,8 @@
 import torch
 import math
 from torch import nn
-from .encoder.mix_vision_transformer import MixVisionTransformer
-from .decoder.segformer_decoder_head import SegFormerDecoderHead
+from .components.encoder.mix_vision_transformer import MixVisionTransformer
+from .components.decoder.segformer_decoder_head import SegFormerDecoderHead
 
 ### Encoder + Decoder Architecture
 class SegFormer3D(nn.Module):
