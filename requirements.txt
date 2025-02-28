@@ -53,6 +53,9 @@ typing_extensions==4.12.2
 gdown==5.2.0
 
 # dcom
-pydicom
-pylidc
-sqlalchemy
+pydicom==3.0.1
+pylidc==0.2.1
+sqlalchemy==2.0.36
+
+# SAM
+git+https://github.com/facebookresearch/segment-anything.git
