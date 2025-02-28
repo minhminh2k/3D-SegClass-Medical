@@ -1,4 +1,4 @@
-_target_: src.models.swin-unetr.SwinUNETR_LIDC_module.SwinUNETR_LIDC_Module
+_target_: src.models.SwinUNETR_LIDC_module.SwinUNETR_LIDC_Module
 defaults:
   - criterion: dice_ce_loss_monai.yaml
   - net: SwinUNETR.yaml

@@ -1,0 +1,40 @@
+# @package _global_
+
+# to execute this experiment run:
+# python src/train.py experiment=unetr_pp
+
+defaults:
+  - override /data: lidc_3d_data
+  - override /model: SwinUNETR_LIDC
+  - override /callbacks: monai_callback
+  - override /trainer: default
+
+# all parameters below will be merged with parameters from default configurations set above
+# this allows you to overwrite only specified parameters
+
+tags: ["lidc", "unetr_pp"]
+
+seed: 42
+
+trainer:
+  min_epochs: 10
+  max_epochs: 250
+  gradient_clip_val: 0.5
+
+model:
+  optimizer:
+    lr: 0.00008
+  net: unetrpp.yaml
+  criterion: dice_ce_loss_monai.yaml
+  scheduler: warmup_cosine.yaml
+  compile: false
+
+data:
+  batch_size: 1
+
+# logger:
+#   wandb:
+#     tags: ${tags}
+#     group: "mnist"
+#   aim:
+#     experiment: "mnist"
