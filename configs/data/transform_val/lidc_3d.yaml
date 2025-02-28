@@ -20,16 +20,16 @@ transforms:
   #   image_key: "image"
   #   image_threshold: 0
 
-  # - _target_: monai.transforms.ScaleIntensityRanged
-  #   keys: ["image"]
-  #   a_min: -1000
-  #   a_max: 400
-  #   b_min: 0.0
-  #   b_max: 1.0
-  #   clip: True
+  - _target_: monai.transforms.ScaleIntensityRanged
+    keys: ["image"]
+    a_min: -1200
+    a_max: 800
+    b_min: 0.0
+    b_max: 1.0
+    clip: True
 
-  - _target_: monai.transforms.NormalizeIntensityd
-    keys: "image"
+  # - _target_: monai.transforms.NormalizeIntensityd
+  #   keys: "image"
   
   - _target_: monai.transforms.ToTensord
     keys: ["image", "label"]

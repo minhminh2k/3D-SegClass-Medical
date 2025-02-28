@@ -11,7 +11,7 @@ import torch.nn.functional
 
 import torch.nn.functional as F
 import torch.utils.checkpoint as checkpoint
-from timm.models.layers import DropPath, to_3tuple, trunc_normal_
+from timm.layers import DropPath, to_3tuple, trunc_normal_
 
 class ContiguousGrad(torch.autograd.Function):
     @staticmethod
@@ -734,7 +734,7 @@ class Encoder(nn.Module):
    
     def __init__(
         self,
-        pretrain_img_size=224,
+        pretrain_img_size=[128, 128, 128],
         patch_size=4,
         in_chans=1  ,
         embed_dim=96,
@@ -752,7 +752,6 @@ class Encoder(nn.Module):
         out_indices=(0, 1, 2, 3)
     ):
         super().__init__()
-
         self.pretrain_img_size = pretrain_img_size
 
         self.num_layers = len(depths)
@@ -919,10 +918,10 @@ class nnFormer(SegmentationNetwork):
 
     def __init__(
         self, 
-        crop_size=[64, 128, 128],
+        crop_size=[128, 128, 128],
         embedding_dim=192,
         input_channels=1, 
-        num_classes=14, 
+        num_classes=1, 
         conv_op=nn.Conv3d, 
         depths=[2, 2, 2, 2],
         num_heads=[6, 12, 24, 48],
@@ -930,14 +929,18 @@ class nnFormer(SegmentationNetwork):
         window_size=[4, 4, 8, 4], # [8, 8, 6, 4]
         deep_supervision=True
     ):
-      
         super(nnFormer, self).__init__()
+        
+        
         self._deep_supervision = deep_supervision
         self.do_ds = deep_supervision
         self.num_classes=num_classes
         self.conv_op=conv_op
        
+        
         self.upscale_logits_ops = []
+     
+        
         self.upscale_logits_ops.append(lambda x: x)
         
         embed_dim=embedding_dim
@@ -945,22 +948,8 @@ class nnFormer(SegmentationNetwork):
         num_heads=num_heads
         patch_size=patch_size
         window_size=window_size
-        self.model_down=Encoder(
-            pretrain_img_size=crop_size,
-            window_size=window_size,
-            embed_dim=embed_dim,
-            patch_size=patch_size,
-            depths=depths,
-            num_heads=num_heads,
-            in_chans=input_channels
-        )
-        self.decoder=Decoder(
-            pretrain_img_size=crop_size,
-            embed_dim=embed_dim,
-            window_size=window_size[::-1][1:],
-            patch_size=patch_size,
-            num_heads=num_heads[::-1][:-1],
-            depths=depths[::-1][1:])
+        self.model_down=Encoder(pretrain_img_size=crop_size,window_size=window_size,embed_dim=embed_dim,patch_size=patch_size,depths=depths,num_heads=num_heads,in_chans=input_channels)
+        self.decoder=Decoder(pretrain_img_size=crop_size,embed_dim=embed_dim,window_size=window_size[::-1][1:],patch_size=patch_size,num_heads=num_heads[::-1][:-1],depths=depths[::-1][1:])
         
         self.final=[]
         if self.do_ds:
@@ -971,7 +960,7 @@ class nnFormer(SegmentationNetwork):
         else:
             self.final.append(final_patch_expanding(embed_dim,num_classes,patch_size=patch_size))
     
-        self.final = nn.ModuleList(self.final)
+        self.final=nn.ModuleList(self.final)
     
 
     def forward(self, x):
@@ -980,18 +969,30 @@ class nnFormer(SegmentationNetwork):
         neck=skips[-1]
        
         out=self.decoder(neck,skips)
-        
         if self.do_ds:
             for i in range(len(out)):  
                 seg_outputs.append(self.final[-(i+1)](out[i]))
         
+          
             return seg_outputs[::-1]
         else:
             seg_outputs.append(self.final[0](out[-1]))
             return seg_outputs[-1]
         
         
-        
-   
+if __name__ == "__main__":
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    
+    input = torch.randint(
+        low=0,
+        high=1,
+        size=(1, 1, 128, 128, 128),
+        dtype=torch.float,
+    ).to(device)
+    model = nnFormer(
+        crop_size=[128, 128, 128],
+        ).to(device)
+    output = nnFormer(input)
+    print(output.shape) # torch.Size([1, num_classes, 128, 128, 128])
 
    

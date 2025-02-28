@@ -62,13 +62,13 @@ class LIDC_3D_Callback(Callback):
         self.transform = Compose(
             [
                 transforms.LoadImaged(keys=["image", "label"], ensure_channel_first=True),
-                transforms.NormalizeIntensityd(keys="image"),
+                # transforms.NormalizeIntensityd(keys="image"),
                 transforms.Resized(
                     keys=["image", "label"],
-                    spatial_size=(128, 128, 128),
+                    spatial_size=self.roi_size,
                     mode=("trilinear", "nearest"),  # Image: trilinear, Label: nearest-neighbor
                 ),
-                # transforms.ScaleIntensityRanged(keys=["image"], a_min=-1000, a_max=400, b_min=0.0, b_max=1.0, clip=True),
+                transforms.ScaleIntensityRanged(keys=["image"], a_min=-1200, a_max=800, b_min=0.0, b_max=1.0, clip=True),
                 transforms.ToTensord(keys=["image", "label"])
             ]
         )

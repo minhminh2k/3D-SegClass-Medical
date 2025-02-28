@@ -1,9 +1,9 @@
 wandb_callback:
   _target_: src.utils.callbacks.wandb_callback_lidc_3d.LIDC_3D_Callback
-  data_nodule_dir: "/data/hpc/dqm/lidc-preprocessing/data/Image"
-  data_clean_dir: "/data/hpc/dqm/lidc-preprocessing/data/Clean/Image"
-  # data_nodule_dir: "/data/hpc/dqm/3D-SegClass-Medical/data/Image"
-  # data_clean_dir: "/data/hpc/dqm/3D-SegClass-Medical/data/Clean/Image"
+  # data_nodule_dir: "/data/hpc/dqm/lidc-preprocessing/data/Image"
+  # data_clean_dir: "/data/hpc/dqm/lidc-preprocessing/data/Clean/Image"
+  data_nodule_dir: "/data/hpc/dqm/3D-SegClass-Medical/data/Image"
+  data_clean_dir: "/data/hpc/dqm/3D-SegClass-Medical/data/Clean/Image"
   classes_name: ["Lung Nodule"]
   colors: ["#00FF00", "#FFFF1E", "#FF0000"]
   n_images_to_log: 2
@@ -12,7 +12,7 @@ wandb_callback:
   num_classes: 4
   case_names:
     [
-      "0027",
+      "0450",
       "0068",
       "0050",
       "0061",
@@ -23,22 +23,6 @@ wandb_callback:
       "0101",
       "0099",
       "0098",
-      "0070",
-      "0009",
-      "0035",
-      "0024",
-      "0020",
-      "0044",
-      "0150",
-      "0132",
-      "0144",
-      "0011",
-      "0087",
-      "0111",
-      "0125",
-      "0133",
-      "0140",
-      "0065",
     ]
   
   

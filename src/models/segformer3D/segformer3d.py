@@ -8,7 +8,7 @@ from .components.decoder.segformer_decoder_head import SegFormerDecoderHead
 class SegFormer3D(nn.Module):
     def __init__(
         self,
-        in_channels: int = 4,
+        in_channels: int = 1,
         sr_ratios: list = [4, 2, 1, 1],
         embed_dims: list = [32, 64, 160, 256],
         patch_kernel_size: list = [7, 3, 3, 3],
@@ -18,7 +18,7 @@ class SegFormer3D(nn.Module):
         num_heads: list = [1, 2, 5, 8],
         depths: list = [2, 2, 2, 2],
         decoder_head_embedding_dim: int = 256,
-        num_classes: int = 3,
+        num_classes: int = 1, # binary segmentation
         decoder_dropout: float = 0.0,
     ):
         """
@@ -106,9 +106,9 @@ if __name__ == "__main__":
     input = torch.randint(
         low=0,
         high=255,
-        size=(1, 4, 128, 128, 128),
+        size=(2, 4, 128, 128, 128),
         dtype=torch.float,
     ).to(device)
-    segformer3D = SegFormer3D().to(device)
+    segformer3D = SegFormer3D(num_classes=1).to(device)
     output = segformer3D(input)
-    print(output.shape) # torch.Size([1, 3, 128, 128, 128])
+    print(output.shape) # torch.Size([1, num_classes, 128, 128, 128])

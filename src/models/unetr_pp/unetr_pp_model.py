@@ -1,3 +1,4 @@
+import torch
 from torch import nn
 from typing import Tuple, Union
 from src.models.unetr_pp.components.neural_network import SegmentationNetwork
@@ -9,29 +10,31 @@ class UNETR_PP(SegmentationNetwork):
     UNETR++ based on: "Shaker et al.,
     UNETR++: Delving into Efficient and Accurate 3D Medical Image Segmentation"
     """
-    def __init__(
-            self,
-            in_channels: int,
-            out_channels: int,
-            feature_size: int = 16,
-            hidden_size: int = 256,
-            num_heads: int = 4,
-            pos_embed: str = "perceptron",
-            norm_name: Union[Tuple, str] = "instance",
-            dropout_rate: float = 0.0,
-            depths=None,
-            dims=None,
-            conv_op=nn.Conv3d,
-            do_ds=True,
 
+    def __init__(
+        self,
+        in_channels: int = 1,
+        out_channels: int = 1,
+        img_size: tuple = [64, 128, 128],
+        patch_size: tuple = [4, 4, 4],
+        feature_size: int = 16,
+        hidden_size: int = 256,
+        num_heads: int = 4,
+        pos_embed: str = "perceptron",  # TODO: Remove the argument
+        norm_name: Union[Tuple, str] = "instance",
+        dropout_rate: float = 0.0,
+        depths: tuple = [3, 3, 3, 3],
+        dims: tuple = [32, 64, 128, 256],
+        conv_op = nn.Conv3d,
+        do_ds=True, # Using deep super vision -> output: list
     ) -> None:
         """
         Args:
             in_channels: dimension of input channels.
             out_channels: dimension of output channels.
-            img_size: dimension of input image. # 128 x 128 x 128
+            img_size: dimension of input image.
             feature_size: dimension of network feature size.
-            hidden_size: dimensions of  the last encoder.
+            hidden_size: dimension of  the last encoder.
             num_heads: number of attention heads.
             pos_embed: position embedding layer type.
             norm_name: feature normalization type and arguments.
@@ -40,6 +43,14 @@ class UNETR_PP(SegmentationNetwork):
             dims: number of channel maps for the stages.
             conv_op: type of convolution operation.
             do_ds: use deep supervision to compute the loss.
+
+        Examples::
+
+            # for single channel input 4-channel output with patch size of (64, 128, 128), feature size of 16, batch
+            norm and depths of [3, 3, 3, 3] with output channels [32, 64, 128, 256], 4 heads, and 14 classes with
+            deep supervision:
+            >>> net = UNETR_PP(in_channels=1, out_channels=14, img_size=(64, 128, 128), feature_size=16, num_heads=4,
+            >>>                 norm_name='batch', depths=[3, 3, 3, 3], dims=[32, 64, 128, 256], do_ds=True)
         """
 
         super().__init__()
@@ -54,10 +65,29 @@ class UNETR_PP(SegmentationNetwork):
         if pos_embed not in ["conv", "perceptron"]:
             raise KeyError(f"Position embedding layer of type {pos_embed} is not supported.")
 
-        self.feat_size = (4, 4, 4,)
+        self.feat_size = (
+            img_size[0]
+            // patch_size[0]
+            // 8,  # 8 is the downsampling happened through the four encoders stages
+            img_size[1]
+            // patch_size[1]
+            // 8,  # 8 is the downsampling happened through the four encoders stages
+            img_size[2]
+            // patch_size[2]
+            // 8,  # 8 is the downsampling happened through the four encoders stages
+        )
         self.hidden_size = hidden_size
 
-        self.unetr_pp_encoder = UnetrPPEncoder(dims=dims, depths=depths, num_heads=num_heads)
+        self.unetr_pp_encoder = UnetrPPEncoder(
+            input_size=[
+                self.feat_size[0] * self.feat_size[1] * self.feat_size[2] * (2 ** (3 - i)) ** 3
+                for i in range(4)
+            ],
+            patch_size=patch_size,
+            dims=dims,
+            depths=depths,
+            num_heads=num_heads,
+        )
 
         self.encoder1 = UnetResBlock(
             spatial_dims=3,
@@ -74,7 +104,7 @@ class UNETR_PP(SegmentationNetwork):
             kernel_size=3,
             upsample_kernel_size=2,
             norm_name=norm_name,
-            out_size=8*8*8,
+            out_size=self.feat_size[0] * self.feat_size[1] * self.feat_size[2] * 2**3,
         )
         self.decoder4 = UnetrUpBlock(
             spatial_dims=3,
@@ -83,7 +113,7 @@ class UNETR_PP(SegmentationNetwork):
             kernel_size=3,
             upsample_kernel_size=2,
             norm_name=norm_name,
-            out_size=16*16*16,
+            out_size=self.feat_size[0] * self.feat_size[1] * self.feat_size[2] * 4**3,
         )
         self.decoder3 = UnetrUpBlock(
             spatial_dims=3,
@@ -92,22 +122,28 @@ class UNETR_PP(SegmentationNetwork):
             kernel_size=3,
             upsample_kernel_size=2,
             norm_name=norm_name,
-            out_size=32*32*32,
+            out_size=self.feat_size[0] * self.feat_size[1] * self.feat_size[2] * 8**3,
         )
         self.decoder2 = UnetrUpBlock(
             spatial_dims=3,
             in_channels=feature_size * 2,
             out_channels=feature_size,
             kernel_size=3,
-            upsample_kernel_size=(4, 4, 4),
+            upsample_kernel_size=patch_size,
             norm_name=norm_name,
-            out_size=128*128*128,
+            out_size=img_size[0] * img_size[1] * img_size[2],
             conv_decoder=True,
         )
-        self.out1 = UnetOutBlock(spatial_dims=3, in_channels=feature_size, out_channels=out_channels)
+        self.out1 = UnetOutBlock(
+            spatial_dims=3, in_channels=feature_size, out_channels=out_channels
+        )
         if self.do_ds:
-            self.out2 = UnetOutBlock(spatial_dims=3, in_channels=feature_size * 2, out_channels=out_channels)
-            self.out3 = UnetOutBlock(spatial_dims=3, in_channels=feature_size * 4, out_channels=out_channels)
+            self.out2 = UnetOutBlock(
+                spatial_dims=3, in_channels=feature_size * 2, out_channels=out_channels
+            )
+            self.out3 = UnetOutBlock(
+                spatial_dims=3, in_channels=feature_size * 4, out_channels=out_channels
+            )
 
     def proj_feat(self, x, hidden_size, feat_size):
         x = x.view(x.size(0), feat_size[0], feat_size[1], feat_size[2], hidden_size)
@@ -115,9 +151,8 @@ class UNETR_PP(SegmentationNetwork):
         return x
 
     def forward(self, x_in):
-        #print("###########reached forward network")
-        #print("XIN",x_in.shape)
         x_output, hidden_states = self.unetr_pp_encoder(x_in)
+
         convBlock = self.encoder1(x_in)
 
         # Four encoders
@@ -139,3 +174,25 @@ class UNETR_PP(SegmentationNetwork):
             logits = self.out1(out)
 
         return logits
+
+if __name__ == "__main__":
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    input = torch.randint(
+        low=0,
+        high=1,
+        size=(1, 1, 128, 128, 128),
+        dtype=torch.float,
+    )
+    model = UNETR_PP(
+        in_channels=1,
+        out_channels=2,
+        img_size=[128, 128, 128],
+        patch_size=[2, 4, 4],
+        feature_size=16,
+        num_heads=4,
+        depths=[3, 3, 3, 3],
+        dims=[32, 64, 128, 256],
+        do_ds=False,
+    )
+    output = model(input)
+    print(output.shape)

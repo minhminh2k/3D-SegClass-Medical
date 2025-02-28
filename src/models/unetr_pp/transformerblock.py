@@ -66,13 +66,6 @@ class TransformerBlock(nn.Module):
         return x
 
 
-def init_(tensor):
-    dim = tensor.shape[-1]
-    std = 1 / math.sqrt(dim)
-    tensor.uniform_(-std, std)
-    return tensor
-
-
 class EPA(nn.Module):
     """
         Efficient Paired Attention Block, based on: "Shaker et al.,
@@ -90,16 +83,21 @@ class EPA(nn.Module):
 
         # E and F are projection matrices with shared weights used in spatial attention module to project
         # keys and values from HWD-dimension to P-dimension
-        self.EF = nn.Parameter(init_(torch.zeros(input_size, proj_size)))
+        self.E = self.F = nn.Linear(input_size, proj_size)
 
         self.attn_drop = nn.Dropout(channel_attn_drop)
         self.attn_drop_2 = nn.Dropout(spatial_attn_drop)
+
+        self.out_proj = nn.Linear(hidden_size, int(hidden_size // 2))
+        self.out_proj2 = nn.Linear(hidden_size, int(hidden_size // 2))
 
     def forward(self, x):
         B, N, C = x.shape
 
         qkvv = self.qkvv(x).reshape(B, N, 4, self.num_heads, C // self.num_heads)
+
         qkvv = qkvv.permute(2, 0, 3, 1, 4)
+
         q_shared, k_shared, v_CA, v_SA = qkvv[0], qkvv[1], qkvv[2], qkvv[3]
 
         q_shared = q_shared.transpose(-2, -1)
@@ -107,23 +105,32 @@ class EPA(nn.Module):
         v_CA = v_CA.transpose(-2, -1)
         v_SA = v_SA.transpose(-2, -1)
 
-        proj_e_f = lambda args: torch.einsum('bhdn,nk->bhdk', *args)
-        k_shared_projected, v_SA_projected = map(proj_e_f, zip((k_shared, v_SA), (self.EF, self.EF)))
+        k_shared_projected = self.E(k_shared)
+
+        v_SA_projected = self.F(v_SA)
 
         q_shared = torch.nn.functional.normalize(q_shared, dim=-1)
         k_shared = torch.nn.functional.normalize(k_shared, dim=-1)
 
         attn_CA = (q_shared @ k_shared.transpose(-2, -1)) * self.temperature
+
         attn_CA = attn_CA.softmax(dim=-1)
         attn_CA = self.attn_drop(attn_CA)
+
         x_CA = (attn_CA @ v_CA).permute(0, 3, 1, 2).reshape(B, N, C)
 
         attn_SA = (q_shared.permute(0, 1, 3, 2) @ k_shared_projected) * self.temperature2
+
         attn_SA = attn_SA.softmax(dim=-1)
         attn_SA = self.attn_drop_2(attn_SA)
+
         x_SA = (attn_SA @ v_SA_projected.transpose(-2, -1)).permute(0, 3, 1, 2).reshape(B, N, C)
 
-        return x_CA + x_SA
+        # Concat fusion
+        x_SA = self.out_proj(x_SA)
+        x_CA = self.out_proj2(x_CA)
+        x = torch.cat((x_SA, x_CA), dim=-1)
+        return x
 
     @torch.jit.ignore
     def no_weight_decay(self):
