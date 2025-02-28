@@ -1,18 +1,16 @@
-from einops import rearrange
-from copy import deepcopy
-from .utilities.nd_softmax import softmax_helper
-from torch import nn
 import torch
 import numpy as np
+from torch import nn
+from copy import deepcopy
+
+from einops import rearrange
+from src.models.nnFormer.utilities.nd_softmax import softmax_helper
 from src.models.nnFormer.components.initialization import InitWeights_He
 from src.models.nnFormer.components.neural_network import SegmentationNetwork
 import torch.nn.functional
-
-
 import torch.nn.functional as F
 import torch.utils.checkpoint as checkpoint
-from timm.models.layers import DropPath, to_3tuple, trunc_normal_
-
+from timm.layers import DropPath, to_3tuple, trunc_normal_
 
 class ContiguousGrad(torch.autograd.Function):
     @staticmethod
@@ -797,8 +795,8 @@ class PatchEmbed(nn.Module):
 
         self.in_chans = in_chans
         self.embed_dim = embed_dim
-        stride1 = [patch_size[0], patch_size[1] // 2, patch_size[2] // 2]
-        stride2 = [1, 2, 2]
+        stride1 = [patch_size[0] // 2, patch_size[1] // 2, patch_size[2] // 2]
+        stride2 = [patch_size[0] // 2, patch_size[1] // 2, patch_size[2] // 2]
         self.proj1 = project(in_chans, embed_dim // 2, stride1, 1, nn.GELU, nn.LayerNorm, False)
         self.proj2 = project(embed_dim // 2, embed_dim, stride2, 1, nn.GELU, nn.LayerNorm, True)
         if norm_layer is not None:
@@ -1022,7 +1020,7 @@ class final_patch_expanding(nn.Module):
 class nnFormer(SegmentationNetwork):
     def __init__(
         self,
-        crop_size=[96, 96, 96],
+        crop_size=[64, 128, 128],
         embedding_dim=192,
         input_channels=1,
         num_classes=14,
@@ -1031,7 +1029,7 @@ class nnFormer(SegmentationNetwork):
         num_heads=[6, 12, 24, 48],
         patch_size=[2, 4, 4],
         window_size=[4, 4, 8, 4],
-        deep_supervision=False,
+        deep_supervision=True,
     ):
         super(nnFormer, self).__init__()
 
@@ -1063,7 +1061,7 @@ class nnFormer(SegmentationNetwork):
             embed_dim=embed_dim,
             window_size=window_size[::-1][1:],
             patch_size=patch_size,
-            num_heads=num_heads[::-1][1:],
+            num_heads=num_heads[::-1][:-1],
             depths=depths[::-1][1:],
         )
 
@@ -1094,3 +1092,28 @@ class nnFormer(SegmentationNetwork):
         else:
             seg_outputs.append(self.final[0](out[-1]))
             return seg_outputs[-1]
+        
+        
+if __name__ == "__main__":
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    
+    input = torch.randint(
+        low=0,
+        high=255,
+        size=(1, 1, 128, 128, 128),
+        dtype=torch.float,
+    )
+    model = nnFormer(
+        input_channels=1,
+        num_classes=2,
+        crop_size=[128, 128, 128],
+        patch_size=[2, 4, 4],
+        window_size=[8, 8, 6, 4],
+        deep_supervision=False
+    )
+    
+    output = model(input)
+    print(output)
+    print(output.shape) # torch.Size([1, num_classes, 128, 128, 128])
+
+   
