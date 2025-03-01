@@ -29,12 +29,14 @@ class LIDC_3D_Callback(Callback):
         data_nodule_dir: str = "/data/hpc/dqm/lidc-preprocessing/data/Image",
         data_clean_dir: str = "/data/hpc/dqm/lidc-preprocessing/data/Clean/Image",
         n_images_to_log: int = 5,
-        roi_size: tuple = [128, 128, 128],
+        roi_size: tuple = [128, 512, 512],
         num_classes: int = 2,
         classes_name: tuple[str] = ["Lung Nodule"],
         colors: tuple[str] = ["#00FF00", "#FFFF1E"],
         case_names: tuple[str] = [ "0068", "0027", "0050", "0061", "0074", "0101", "0117"],
         number_of_logged_samples: int = 2,
+        min_px: int = -1000,
+        max_px: int = 400
     ):
         self.num_classes = num_classes
         self.roi_size = roi_size
@@ -47,6 +49,9 @@ class LIDC_3D_Callback(Callback):
         
         self.n_images_to_log = n_images_to_log
         self.number_of_logged_samples = number_of_logged_samples
+        
+        self.min_px = min_px
+        self.max_px = max_px
         
         self.n_samples_validation = []
         self.n_samples_test = []
@@ -68,7 +73,7 @@ class LIDC_3D_Callback(Callback):
                     spatial_size=self.roi_size,
                     mode=("trilinear", "nearest"),  # Image: trilinear, Label: nearest-neighbor
                 ),
-                transforms.ScaleIntensityRanged(keys=["image"], a_min=-1200, a_max=800, b_min=0.0, b_max=1.0, clip=True),
+                transforms.ScaleIntensityRanged(keys=["image"], a_min=self.min_px, a_max=self.max_px, b_min=0.0, b_max=1.0, clip=True),
                 transforms.ToTensord(keys=["image", "label"])
             ]
         )
@@ -77,6 +82,10 @@ class LIDC_3D_Callback(Callback):
         # First sample in case names
         image = np.load(self.image_dict[0]["image"])
         label = np.load(self.image_dict[0]["label"])
+        
+        # Clipped
+        image[image > self.max_px] = self.max_px
+        image[image < self.min_px] = self.min_px
         
         volume = gif_visualization(
             image=image,
