@@ -1,0 +1,20 @@
+_target_: src.models.SwinUNETR_LIDC_module.SwinUNETR_LIDC_Module
+defaults:
+  - criterion: dice_ce_loss_monai.yaml
+  - net: sam3d.yaml
+  - scheduler: warmup_cosine.yaml
+
+optimizer:
+  _target_: torch.optim.AdamW
+  _partial_: true
+  lr: 0.00004
+  weight_decay: 0.00001
+
+# scheduler:
+#   _target_: torch.optim.lr_scheduler.CosineAnnealingLR
+#   _partial_: true
+#   T_max: ${trainer.max_epochs}
+  
+# compile model for faster training with pytorch 2.0
+compile: false
+num_classes: 2 # including background

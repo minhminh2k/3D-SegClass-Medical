@@ -1,0 +1,8 @@
+_target_: src.models.SAMs.SAM3D.sam3d_model.Sam3D
+
+image_size: [128, 128, 128]
+num_classes: 1
+ckpt: "/data/hpc/dqm/3D-SegClass-Medical/checkpoints/sam_vit_b_01ec64.pth"
+vit_name: 'vit_b'
+num_modalities: 1
+do_ds: False
