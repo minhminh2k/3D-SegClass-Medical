@@ -7,7 +7,7 @@ transforms:
   
   - _target_: monai.transforms.Resized
     keys: ["image", "label"]
-    spatial_size: [128, 128, 128]
+    spatial_size: [128, 256, 256]
     mode: ["trilinear", "nearest"]
 
   # - _target_: monai.transforms.RandCropByPosNegLabeld

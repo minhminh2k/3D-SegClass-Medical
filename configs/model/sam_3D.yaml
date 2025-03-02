@@ -8,7 +8,7 @@ optimizer:
   _target_: torch.optim.AdamW
   _partial_: true
   lr: 0.00004
-  weight_decay: 0.00001
+  weight_decay: 0.0001
 
 # scheduler:
 #   _target_: torch.optim.lr_scheduler.CosineAnnealingLR
@@ -17,4 +17,4 @@ optimizer:
   
 # compile model for faster training with pytorch 2.0
 compile: false
-num_classes: 2 # including background
+num_classes: 1 # including background

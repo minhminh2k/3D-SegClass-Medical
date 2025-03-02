@@ -1,5 +1,5 @@
-from segment_anything import build_sam, SamPredictor
-from segment_anything import sam_model_registry
+from src.models.SAMs.SAM3D.segment_anything import build_sam, SamPredictor
+from src.models.SAMs.SAM3D.segment_anything import sam_model_registry
 
 import math
 import torch
@@ -8,7 +8,7 @@ import torch.nn.functional as F
 from torch import Tensor
 from torch.nn.parameter import Parameter
 from segment_anything.modeling import Sam
-from src.models.unetr_pp.components.neural_network import SegmentationNetwork
+from .neural_network import SegmentationNetwork
 from einops import repeat, rearrange
 
 

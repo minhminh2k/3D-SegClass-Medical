@@ -14,7 +14,6 @@ from monai import transforms
 from monai.transforms import Compose
 from PIL import Image
 from lightning.pytorch.callbacks import Callback
-from torchvision.utils import make_grid
 from src.utils.visualization.custom_visualize import gif_visualization
 
 logging.basicConfig(
