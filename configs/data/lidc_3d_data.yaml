@@ -9,7 +9,10 @@ defaults:
 data_nodule_dir: "/data/hpc/dqm/3D-SegClass-Medical/data/Image"
 data_clean_dir: "/data/hpc/dqm/3D-SegClass-Medical/data/Clean/Image"
 train_val_test_split: [70, 15, 15]
-batch_size: 3
+
+image_size: [128, 256, 256]
+
+batch_size: 4 # SAM3D
 num_workers: 2
 pin_memory: False
 num_nodule_samples: 2000

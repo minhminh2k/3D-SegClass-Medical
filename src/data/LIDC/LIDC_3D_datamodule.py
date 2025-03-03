@@ -70,6 +70,7 @@ class LIDC_IDRI_3D_Datamodule(LightningDataModule):
         train_val_test_split: Tuple[int, int, int] = (6, 2, 2),
         transform_train:  Optional[Compose] = None,
         transform_val:  Optional[Compose] = None,
+        image_size: tuple = [128, 128, 128],
         batch_size: int = 2,
         num_workers: int = 0,
         pin_memory: bool = False,

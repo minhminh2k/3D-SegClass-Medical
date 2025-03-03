@@ -8,7 +8,7 @@ wandb_callback:
   colors: ["#00FF00", "#FFFF1E", "#FF0000"]
   n_images_to_log: 1
   number_of_logged_samples: 1
-  roi_size: [128, 256, 256]
+  roi_size: ${data.image_size}
   num_classes: 2
   min_px: -1000
   max_px: 400
