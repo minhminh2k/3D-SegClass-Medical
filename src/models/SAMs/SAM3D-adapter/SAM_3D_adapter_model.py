@@ -33,7 +33,7 @@ class SAM_3D_Adapter(nn.Module):
     def __init__(
         self, 
         model_type: str = "vit_b", 
-        mode_checkpoint: str = "/data/hpc/dqm/3D-SegClass-Medical/checkpoints/sam_vit_b_01ec64.pth",
+        model_checkpoint: str = "/data/hpc/dqm/3D-SegClass-Medical/checkpoints/sam_vit_b_01ec64.pth",
         freeze_image_encoder: bool = True,
         freeze_prompt_encoder: bool = True,
         freeze_mask_decoder: bool = False,
@@ -63,7 +63,7 @@ class SAM_3D_Adapter(nn.Module):
     ):
         super().__init__()
         self.model_type = model_type
-        self.model_checkpoint = mode_checkpoint
+        self.model_checkpoint = model_checkpoint
         self.freeze_image_encoder = freeze_image_encoder
         self.freeze_prompt_encoder = freeze_prompt_encoder
         self.freeze_mask_decoder = freeze_mask_decoder
