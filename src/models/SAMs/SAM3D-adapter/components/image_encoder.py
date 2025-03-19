@@ -187,7 +187,7 @@ class ImageEncoderViT_3d_v2(nn.Module):
             rel_pos_zero_init: bool = True,
             window_size: int = 0,
             cubic_window_size: int = 0,
-            global_attn_indexes: Tuple[int, ...] = (),
+            global_attn_indexes: Tuple[int, ...] = [2, 5, 8, 11],
             num_slice = 1
     ) -> None:
         """

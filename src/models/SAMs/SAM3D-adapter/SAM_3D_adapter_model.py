@@ -16,8 +16,6 @@ from segment_anything import SamAutomaticMaskGenerator
 from .components.image_encoder import ImageEncoderViT_3d_v2 as ImageEncoderViT_3d
 from .components.mask_decoder import VIT_MLAHead_h as VIT_MLAHead
 from .components.prompt_encoder import PromptEncoder, TwoWayTransformer
-
-from monai.losses import DiceCELoss, DiceLoss
 from monai.inferers import sliding_window_inference
 
 logging.basicConfig(
@@ -34,9 +32,6 @@ class SAM_3D_Adapter(nn.Module):
         self, 
         model_type: str = "vit_b",
         model_checkpoint: str = "/data/hpc/dqm/3D-SegClass-Medical/checkpoints/sam_vit_b_01ec64.pth",
-        freeze_image_encoder: bool = True,
-        freeze_prompt_encoder: bool = True,
-        freeze_mask_decoder: bool = False,
         auto_finetuning: bool = True, # If False, Using Prompt Encoder
         rand_crop_size: tuple = (128, 128, 128),
         num_classes: int = 2,
@@ -50,26 +45,19 @@ class SAM_3D_Adapter(nn.Module):
         mlp_ratio: float = 4.0,
         out_chans: int = 256,
         qkv_bias: bool = True,
-        norm_layer: Type[nn.Module] = nn.LayerNorm,
-        act_layer: Type[nn.Module] = nn.GELU,
-        use_abs_pos: bool = True,
-        use_rel_pos: bool = False,
-        rel_pos_zero_init: bool = True,
-        window_size: int = 0,
-        cubic_window_size: int = 0,
-        global_attn_indexes: Tuple[int, ...] = (),
-        num_slice = 1,
+        use_rel_pos: bool = True,
+        window_size: int = 14,
+        cubic_window_size: int = 8,
+        global_attn_indexes: Tuple[int, ...] = (2, 5, 8, 11),
+        num_slice: int = 16,
         device: str = 'cuda'
     ):
         super().__init__()
         self.model_type = model_type
         self.model_checkpoint = model_checkpoint
-        self.freeze_image_encoder = freeze_image_encoder
-        self.freeze_prompt_encoder = freeze_prompt_encoder
-        self.freeze_mask_decoder = freeze_mask_decoder
         self.num_classess = num_classes
         self.rand_crop_size = rand_crop_size
-        self.path_size = self.rand_crop_size[0]
+        self.patch_size = self.rand_crop_size[0]
         self.auto_finetuning = auto_finetuning
         
         self.depth = depth
@@ -77,7 +65,7 @@ class SAM_3D_Adapter(nn.Module):
         self.embed_dim = embed_dim
         self.mlp_ratio = mlp_ratio
         self.num_heads = num_heads
-        self.patch_size = patch_size
+        self.image_encoder_patch_size = patch_size
         self.qkv_bias = qkv_bias
         self.use_rel_pos = use_rel_pos
         self.global_attn_indexes = global_attn_indexes
@@ -99,35 +87,24 @@ class SAM_3D_Adapter(nn.Module):
         
         # Delete sam model
         del self.sam_model
-        # self.image_encoder.to(self.device)
+        
+        self.image_encoder.to(self.device)
         
         # Initialize prompt encoder
         self.prompt_encoder_list, self.parameter_list = self.initialize_prompt_encoder()
         
         # Initialize mask decoder
-        self.mask_decoder = VIT_MLAHead(img_size=96, num_classes=self.num_classess)
+        self.mask_decoder = VIT_MLAHead(img_size=96, num_classes=self.num_classess).to(self.device)
         # self.mask_decoder.to(self.device) 
         
         # Optimizer parameter
         self.optimizer_parameters = self.get_optimizer_parameters()
-        
-        
-        if self.freeze_image_encoder:
-            for param in self.model.image_encoder.parameters():
-                param.requires_grad = False
-        if self.freeze_prompt_encoder:
-            for param in self.model.prompt_encoder.parameters():
-                param.requires_grad = False
-        if self.freeze_mask_decoder:
-            for param in self.model.mask_decoder.parameters():
-                param.requires_grad = False
                 
         # dice_loss = DiceLoss(include_background=False, softmax=True, to_onehot_y=True, reduction="none")
         # loss_cal = DiceCELoss(include_background=False, softmax=True, to_onehot_y=True, lambda_dice=0.5, lambda_ce=0.5)
         
-    def forward(self, img, seg, spacing):
-        out = F.interpolate(img.float(), scale_factor=512 / self.path_size, mode='trilinear')
-        # input_batch = (out.cuda() - pixel_mean) / pixel_std
+    def forward(self, img, seg = None):
+        out = F.interpolate(img.float(), scale_factor=512 / self.patch_size, mode='trilinear')
         input_batch = out.to(self.device)
         input_batch = input_batch[0].transpose(0, 1)
         batch_features, feature_list = self.image_encoder(input_batch)
@@ -161,24 +138,23 @@ class SAM_3D_Adapter(nn.Module):
             for i, (feature, prompt_encoder) in enumerate(zip(feature_list, self.prompt_encoder_list)):
                 if i == 3:
                     new_feature.append(
-                        prompt_encoder(feature, points_torch.clone(), [self.path_size, self.path_size, self.path_size])
+                        prompt_encoder(feature, points_torch.clone(), [self.patch_size, self.patch_size, self.patch_size])
                     )
                 else:
                     new_feature.append(feature)
         else:
             new_feature = feature_list
 
-        img_resize = F.interpolate(img[:, 0].permute(0, 2, 3, 1).unsqueeze(1).to(self.device), scale_factor=64/self.path_size, # .to(device)
+        img_resize = F.interpolate(img[:, 0].permute(0, 2, 3, 1).unsqueeze(1).to(self.device), scale_factor=64/self.patch_size, # .to(device)
             mode='trilinear')
         new_feature.append(img_resize)
-        masks = self.mask_decoder(new_feature, 2, self.path_size//64)
+        masks = self.mask_decoder(new_feature, 2, self.patch_size//64)
         masks = masks.permute(0, 1, 4, 2, 3)
-        seg = seg.to(self.device)
-        seg = seg.unsqueeze(1)
+        # seg = seg.to(self.device)
+        # seg = seg.unsqueeze(1)
+        
         # loss = loss_function(masks, seg)
-        
-        
-        return img, seg, masks
+        return img, masks # seg
         
 
     def get_predictor(self):
@@ -193,7 +169,7 @@ class SAM_3D_Adapter(nn.Module):
             mlp_ratio=self.mlp_ratio,
             norm_layer=partial(torch.nn.LayerNorm, eps=1e-6),
             num_heads=self.num_heads,
-            patch_size=self.patch_size,
+            patch_size=self.image_encoder_patch_size,
             qkv_bias=self.qkv_bias,
             use_rel_pos=self.use_rel_pos,
             global_attn_indexes=self.global_attn_indexes,
@@ -295,11 +271,19 @@ class SAM_3D_Adapter(nn.Module):
         self.image_encoder.to(self.device)
         
         # Prompt Encoder
-        if self.auto_finetuning:
-            for prompt_encoder in self.prompt_encoder_list:
+        if not self.auto_finetuning:
+            
+            prompt_encoder_list = []
+            for i in range(4):
+                prompt_encoder = PromptEncoder(transformer=TwoWayTransformer(depth=2,
+                        embedding_dim=256,
+                        mlp_dim=2048,
+                        num_heads=8))
                 prompt_encoder.load_state_dict(
                     torch.load(os.path.join(snapshot_path, file), map_location='cpu')["feature_dict"][i], strict=True)
-                prompt_encoder.to(self.device)
+                prompt_encoder.to(device)
+                prompt_encoder_list.append(prompt_encoder)
+            self.prompt_encoder_list = prompt_encoder_list
                 
         # Mask Decoder
         self.mask_decoder.load_state_dict(torch.load(os.path.join(snapshot_path, file), map_location='cpu')["decoder_dict"],
@@ -313,16 +297,17 @@ class SAM_3D_Adapter(nn.Module):
         # self.mask_decoder.eval()
     
     def model_predict_auto(self, img, img_encoder, mask_decoder):
-        out = F.interpolate(img.float(), scale_factor=512 / self.path_size, mode='trilinear')
+        
+        out = F.interpolate(img.float(), scale_factor=512 / self.patch_size, mode='trilinear')
         input_batch = out[0].transpose(0, 1)
         batch_features, feature_list = img_encoder(input_batch)
         feature_list.append(batch_features)
 
         new_feature = feature_list
-        img_resize = F.interpolate(img[0, 0].permute(1, 2, 0).unsqueeze(0).unsqueeze(0).to(self.device), scale_factor=64/self.path_size,
+        img_resize = F.interpolate(img[0, 0].permute(1, 2, 0).unsqueeze(0).unsqueeze(0).to(self.device), scale_factor=64/self.patch_size,
                                    mode="trilinear")
         new_feature.append(img_resize)
-        masks = mask_decoder(new_feature, 2, self.path_size//64)
+        masks = mask_decoder(new_feature, 2, self.patch_size//64)
         masks = masks.permute(0, 1, 4, 2, 3)
         masks = torch.softmax(masks, dim=1)
         masks = masks[:, 1:]
@@ -331,8 +316,7 @@ class SAM_3D_Adapter(nn.Module):
     def _inference_model_predict_auto(self, test_data):
         list_masks = []
         with torch.no_grad():
-            loss_summary = []
-            loss_nsd = []
+
             for idx, (img, seg, spacing) in enumerate(test_data):
                 seg = seg.float()
                 seg = seg.to(self.device)
@@ -432,7 +416,6 @@ class SAM_3D_Adapter(nn.Module):
                 #     ))
             # logging.info("- Test metrics Dice: " + str(np.mean(loss_summary)))
 
-    
 def save_checkpoint(state, is_best, checkpoint):
     filepath_last = os.path.join(checkpoint, "last.pth.tar")
     filepath_best = os.path.join(checkpoint, "best.pth.tar")
@@ -446,3 +429,14 @@ def save_checkpoint(state, is_best, checkpoint):
         if os.path.isfile(filepath_best):
             os.remove(filepath_best)
         shutil.copyfile(filepath_last, filepath_best)
+
+if __name__ == "__main__":
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    
+    input = torch.rand((1, 3, 128, 128, 128), dtype=torch.float).to("cuda")
+    
+    model = SAM_3D_Adapter(device="cuda")
+    
+    _, output = model(input)
+    print(output)
+    print(output.shape) # torch.Size([batch, num_classes, 128, 128, 128])

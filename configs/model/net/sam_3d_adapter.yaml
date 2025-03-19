@@ -1,0 +1,25 @@
+_target_: src.models.SAMs.SAM3D-adapter.SAM_3D_adapter_model.SAM_3D_Adapter
+
+model_type: "vit_b"
+model_checkpoint: "/data/hpc/dqm/3D-SegClass-Medical/checkpoints/sam_vit_b_01ec64.pth"
+auto_finetuning: True # If False Using Prompt Encoder
+rand_crop_size: [128, 128, 128]
+num_classes: 2
+
+img_size: 1024
+patch_size: 16
+patch_depth: 32
+in_chans: 3
+embed_dim: 768
+depth: 12
+num_heads: 12
+mlp_ratio: 4.0
+out_chans: 256
+qkv_bias: True
+use_rel_pos: True
+rel_pos_zero_init: True
+window_size: 14
+cubic_window_size: 8
+global_attn_indexes: [2, 5, 8, 11]
+num_slice: 16
+device: 'cuda'
