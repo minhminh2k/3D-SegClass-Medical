@@ -1,9 +1,10 @@
 _target_: monai.losses.DiceCELoss
 
+include_background: False
 sigmoid: True
 softmax: False
 squared_pred: True
 smooth_nr: 0.00001
 smooth_dr: 0.00001
 lambda_dice: 1.0
-lambda_ce: 0.7
+lambda_ce: 0.4

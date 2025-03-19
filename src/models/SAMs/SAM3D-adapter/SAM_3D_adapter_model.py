@@ -32,12 +32,12 @@ class SAM_3D_Adapter(nn.Module):
 
     def __init__(
         self, 
-        model_type: str = "vit_b", 
+        model_type: str = "vit_b",
         model_checkpoint: str = "/data/hpc/dqm/3D-SegClass-Medical/checkpoints/sam_vit_b_01ec64.pth",
         freeze_image_encoder: bool = True,
         freeze_prompt_encoder: bool = True,
         freeze_mask_decoder: bool = False,
-        auto_finetuning: bool = False, # If False, Using Prompt Encoder
+        auto_finetuning: bool = True, # If False, Using Prompt Encoder
         rand_crop_size: tuple = (128, 128, 128),
         num_classes: int = 2,
         img_size: int = 1024,
@@ -101,7 +101,7 @@ class SAM_3D_Adapter(nn.Module):
         del self.sam_model
         # self.image_encoder.to(self.device)
         
-        # Initialize prompt encoder 
+        # Initialize prompt encoder
         self.prompt_encoder_list, self.parameter_list = self.initialize_prompt_encoder()
         
         # Initialize mask decoder
@@ -205,6 +205,7 @@ class SAM_3D_Adapter(nn.Module):
         
         self.image_encoder.load_state_dict(self.mask_generator.predictor.model.image_encoder.state_dict(), strict=False)
         
+        # Freeze Image Encoder
         for p in self.image_encoder.parameters():
             p.requires_grad = False
             

@@ -1,7 +1,6 @@
-_target_: monai.losses.DiceLoss
+_target_: src.models.losses.dice_loss_monai.DiceLossMonAI
 
 to_onehot_y: False
 sigmoid: True
-# squared_pred: False
-# smooth_nr: 0.0 # If squared_dice
-# smooth_dr: 0.000001 # If squared_dice
+softmax: False
+include_backfround: False

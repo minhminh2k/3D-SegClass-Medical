@@ -12,6 +12,7 @@ from monai.transforms import (
 from monai.data import decollate_batch
 from monai.metrics import DiceMetric
 from monai.utils.enums import MetricReduction
+from monai.losses import DiceLoss, DiceCELoss
 
 logging.basicConfig(
     level=logging.INFO,
@@ -58,11 +59,14 @@ class SwinUNETR_LIDC_Module(LightningModule):
         optimizer: torch.optim.Optimizer,
         scheduler: torch.optim.lr_scheduler,
         criterion: torch.nn.Module,
+        dice_loss: torch.nn.Module,
+        ce_loss: torch.nn.Module,
         compile: bool,
         roi_size: Tuple[int, int, int] = [128, 128, 128],
         sw_batch_size: int = 4,
         infer_overlap: float = 0.5,
         num_classes: int = 2,
+
     ) -> None:
         """Initialize a `MNISTLitModule`.
 
@@ -80,6 +84,9 @@ class SwinUNETR_LIDC_Module(LightningModule):
 
         # loss function
         self.criterion = criterion
+
+        self.ce_loss = ce_loss
+        self.dice_loss = dice_loss
         
         # Post processing each class
         self.post_sigmoid = Activations(sigmoid=True)
@@ -98,6 +105,15 @@ class SwinUNETR_LIDC_Module(LightningModule):
         self.train_loss = MeanMetric()
         self.val_loss = MeanMetric()
         self.test_loss = MeanMetric()
+        
+        self.train_ce_loss = MeanMetric()
+        self.val_ce_loss = MeanMetric()
+        self.test_ce_loss = MeanMetric()
+        
+        self.train_dice_loss = MeanMetric()
+        self.val_dice_loss = MeanMetric()
+        self.test_dice_loss = MeanMetric()
+        
 
         # for tracking best so far validation accuracy
         self.val_metric_best = MaxMetric()
@@ -131,15 +147,16 @@ class SwinUNETR_LIDC_Module(LightningModule):
             - A tensor of predictions.
             - A tensor of target labels.
         """
-        # B C H W D
-        image, target = batch["image"], batch["label"] # [batch, 1, 128, 128, 128], [batch, 1, 128, 128, 128]
-        # Image: -0.5 -> 2x -> NormalizeIntensity
-        # Randscale: 0.0 -> 1.0
+        # B C H W D -> B = batch * num_samples
+        image, target = batch["image"], batch["label"] # [B, 1, 128, 128, 128], [B, 1, 128, 128, 128]
                         
-        logits = self.forward(image) # [batch, 1, 128, 128, 128]
+        logits = self.forward(image) # [B, 1, 128, 128, 128]
         
         loss = self.criterion(logits, target)
-        return loss, logits, target
+        ce_loss = self.ce_loss(logits,target)
+        dice_loss = self.dice_loss(logits, target)
+        
+        return loss, ce_loss, dice_loss, logits, target
 
     def training_step(
         self, batch: Tuple[torch.Tensor, torch.Tensor], batch_idx: int
@@ -151,7 +168,7 @@ class SwinUNETR_LIDC_Module(LightningModule):
         :param batch_idx: The index of the current batch.
         :return: A tensor of losses between model predictions and targets.
         """
-        loss, pred_masks, gt_masks = self.model_step(batch)
+        loss, ce_loss, dice_loss, pred_masks, gt_masks = self.model_step(batch)
             
         labels_list = decollate_batch(gt_masks)
         outputs_list = decollate_batch(pred_masks)
@@ -159,12 +176,18 @@ class SwinUNETR_LIDC_Module(LightningModule):
         
         # update and log metrics
         self.train_loss(loss)
-        train_dice = self.train_metric(y_pred=outputs_convert, y=labels_list)
+        self.train_ce_loss(ce_loss)
+        self.train_dice_loss(dice_loss)
+        
+        _ = self.train_metric(y_pred=outputs_convert, y=labels_list)
         
         # logging.info(f"Training Step: {train_dice}") # Ex: tensor([[0.6667]], device='cuda:0')
         
         self.log("train/loss", self.train_loss, on_step=False, on_epoch=True, prog_bar=True)
-        self.log("train/dice", train_dice[0][0], on_step=False, on_epoch=True, prog_bar=True)
+        self.log("train/ce_loss", self.ce_loss, on_step=False, on_epoch=True, prog_bar=True)
+        self.log("train/dice_loss", self.dice_loss, on_step=False, on_epoch=True, prog_bar=True)
+        
+        # self.log("train/dice", train_dice[0][0], on_step=False, on_epoch=True, prog_bar=True)
 
         # return loss or backpropagation will fail
         return loss
@@ -183,7 +206,7 @@ class SwinUNETR_LIDC_Module(LightningModule):
             labels.
         :param batch_idx: The index of the current batch.
         """
-        loss, pred_masks, labels = self.model_step(batch)
+        loss, ce_loss, dice_loss, pred_masks, labels = self.model_step(batch)
 
         loss = self.criterion(pred_masks, labels)
         
@@ -193,11 +216,17 @@ class SwinUNETR_LIDC_Module(LightningModule):
         outputs_convert =  [self.post_pred(self.post_sigmoid(pred_tensor)) for pred_tensor in outputs_list]
 
         # update and log metrics
-        self.val_loss(loss) 
-        val_dice = self.val_metric(y_pred=outputs_convert, y=labels_list)
+        self.val_loss(loss)
+        self.val_ce_loss(ce_loss)
+        self.val_dice_loss(dice_loss)
+        
+        _ = self.val_metric(y_pred=outputs_convert, y=labels_list)
                 
         self.log("val/loss", self.val_loss, on_step=False, on_epoch=True, prog_bar=True)
-        self.log("val/dice", val_dice[0][0], on_step=False, on_epoch=True, prog_bar=True)
+        self.log("val/ce_loss", self.val_ce_loss, on_step=False, on_epoch=True, prog_bar=True)
+        self.log("val/dice_loss", self.val_dice_loss, on_step=False, on_epoch=True, prog_bar=True)
+        
+        # self.log("val/dice", val_dice[0][0], on_step=False, on_epoch=True, prog_bar=True)
         
         return {"loss": loss, "preds": pred_masks, "targets": labels}
         
@@ -221,7 +250,7 @@ class SwinUNETR_LIDC_Module(LightningModule):
             labels.
         :param batch_idx: The index of the current batch.
         """
-        loss, pred_masks, labels = self.model_step(batch)
+        loss, ce_loss, dice_loss, pred_masks, labels = self.model_step(batch)
         
         loss = self.criterion(pred_masks, labels)
         
@@ -231,11 +260,16 @@ class SwinUNETR_LIDC_Module(LightningModule):
 
         # update and log metrics
         self.test_loss(loss)
-        test_dice = self.test_metric(y_pred=outputs_convert, y=labels_list)
+        self.test_ce_loss(ce_loss)
+        self.test_dice_loss(dice_loss)
+        
+        _ = self.test_metric(y_pred=outputs_convert, y=labels_list)
         
         self.log("test/loss", self.test_loss, on_step=False, on_epoch=True, prog_bar=True)
+        self.log("test/ce_loss", self.test_ce_loss, on_step=False, on_epoch=True, prog_bar=True)
+        self.log("test/dice_loss", self.test_dice_loss, on_step=False, on_epoch=True, prog_bar=True)
         
-        self.log("test/dice", test_dice[0][0], on_step=False, on_epoch=True, prog_bar=True) # whole tumor
+        # self.log("test/dice", test_dice[0][0], on_step=False, on_epoch=True, prog_bar=True)
         
         return {"loss": loss, "preds": pred_masks, "targets": labels}
         
@@ -246,7 +280,7 @@ class SwinUNETR_LIDC_Module(LightningModule):
         
         self.test_metric_best(acc1)
         
-        self.log("test/dice_best", self.test_metric_best.compute(), sync_dist=True, prog_bar=True)
+        self.log("test/dice", self.test_metric_best.compute(), sync_dist=True, prog_bar=True)
 
     def setup(self, stage: str) -> None:
         """Lightning hook that is called at the beginning of fit (train + validate), validate,
