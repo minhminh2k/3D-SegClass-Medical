@@ -66,46 +66,46 @@ class LIDC_3D_Callback(Callback):
         self.transform = Compose(
             [
                 transforms.LoadImaged(keys=["image", "label"], ensure_channel_first=True),
-                # transforms.NormalizeIntensityd(keys="image"),
+                transforms.RandSpatialCropd(keys=["image", "label"], roi_size=[128, 256, 256], random_size=False),
                 transforms.Resized(
                     keys=["image", "label"],
                     spatial_size=self.roi_size,
                     mode=("trilinear", "nearest"),  # Image: trilinear, Label: nearest-neighbor
                 ),
-                transforms.ScaleIntensityRanged(keys=["image"], a_min=self.min_px, a_max=self.max_px, b_min=0.0, b_max=1.0, clip=True),
                 transforms.ToTensord(keys=["image", "label"])
             ]
         )
         
     def on_train_start(self, trainer: "pl.Trainer", pl_module: "pl.LightningModule"):
-        # First sample in case names
-        image = np.load(self.image_dict[0]["image"])
-        label = np.load(self.image_dict[0]["label"])
+        # # First sample in case names
+        # image = np.load(self.image_dict[0]["image"])
+        # label = np.load(self.image_dict[0]["label"])
         
-        # Clipped
-        image[image > self.max_px] = self.max_px
-        image[image < self.min_px] = self.min_px
+        # # Clipped
+        # image[image > self.max_px] = self.max_px
+        # image[image < self.min_px] = self.min_px
         
-        volume = gif_visualization(
-            image=image,
-            label=label,
-            num_classes=self.num_classes,
-            colors=self.colors,
-            transparency=0.4
-        )
-        
-        frames = [Image.fromarray(volume[i]) for i in range(len(volume))]
-        gif_buffer = BytesIO()
-        frames[0].save(gif_buffer, format="GIF", save_all=True, append_images=frames[1:], duration=100, loop=0)
-        gif_buffer.seek(0)
-        
-        # trainer.logger.log_image(
-        #     key=f"Ground truth sample",
-        #     images=[wandb.Video(gif_buffer, format="gif")],
+        # volume = gif_visualization(
+        #     image=image,
+        #     label=label,
+        #     num_classes=self.num_classes,
+        #     colors=self.colors,
+        #     transparency=0.4
         # )
-        wandb.log({"Ground truth sample": wandb.Video(gif_buffer, format="gif")})
         
-        gif_buffer.close()
+        # frames = [Image.fromarray(volume[i]) for i in range(len(volume))]
+        # gif_buffer = BytesIO()
+        # frames[0].save(gif_buffer, format="GIF", save_all=True, append_images=frames[1:], duration=100, loop=0)
+        # gif_buffer.seek(0)
+        
+        # # trainer.logger.log_image(
+        # #     key=f"Ground truth sample",
+        # #     images=[wandb.Video(gif_buffer, format="gif")],
+        # # )
+        # wandb.log({"Ground truth sample": wandb.Video(gif_buffer, format="gif")})
+        
+        # gif_buffer.close()
+        pass
 
     def on_train_epoch_end(self, trainer: "pl.Trainer", pl_module: "pl.LightningModule"):
 

@@ -146,6 +146,7 @@ class Sam3D(SegmentationNetwork):
                                                 checkpoint=self.sam_ckpt, in_channel=3,
                                                 pixel_mean=[0, 0, 0], pixel_std=[1, 1, 1]).cuda()
         
+        # Freeze image encoder
         for param in sam.image_encoder.parameters():
             param.requires_grad = False
         

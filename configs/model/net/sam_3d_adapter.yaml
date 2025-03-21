@@ -1,9 +1,9 @@
 _target_: src.models.SAMs.SAM3D-adapter.SAM_3D_adapter_model.SAM_3D_Adapter
 
 model_type: "vit_b"
-model_checkpoint: "/data/hpc/dqm/3D-SegClass-Medical/checkpoints/sam_vit_b_01ec64.pth"
+model_checkpoint: "/data/hpc/dqm/3D-SegClass-Medical/checkpoints/sam/sam_vit_b_01ec64.pth"
 auto_finetuning: True # If False Using Prompt Encoder
-rand_crop_size: [128, 128, 128]
+rand_crop_size: ${data.image_size}
 num_classes: 2
 
 img_size: 1024

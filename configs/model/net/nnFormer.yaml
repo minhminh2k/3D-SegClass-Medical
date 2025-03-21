@@ -1,6 +1,6 @@
 _target_: src.models.nnFormer.nnFormer.nnFormer
 
-crop_size: [128, 128, 128]
+crop_size: ${data.image_size}
 embedding_dim: 192
 input_channels: 1
 num_classes: 1

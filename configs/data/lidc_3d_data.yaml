@@ -12,7 +12,7 @@ train_val_test_split: [70, 15, 15]
 
 image_size: [128, 256, 256]
 
-batch_size: 4 # SAM3D
+batch_size: 4 # SAM3D: 4
 num_workers: 2
 pin_memory: False
 num_nodule_samples: 2000
