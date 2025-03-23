@@ -4,6 +4,16 @@ defaults:
   - net: sam3d.yaml
   - scheduler: warmup_cosine.yaml
 
+ce_loss: 
+  _target_: src.models.losses.CE_loss.CrossEntropyLoss
+
+dice_loss: 
+  _target_: src.models.losses.dice_loss_monai.DiceLossMonAI
+  to_onehot_y: False
+  sigmoid: True
+  softmax: False
+  include_backfround: False
+
 optimizer:
   _target_: torch.optim.AdamW
   _partial_: true

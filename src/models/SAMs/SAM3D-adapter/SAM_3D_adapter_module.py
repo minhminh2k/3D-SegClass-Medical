@@ -207,8 +207,6 @@ class SwinUNETR_LIDC_Module(LightningModule):
         :param batch_idx: The index of the current batch.
         """
         loss, ce_loss, dice_loss, pred_masks, labels = self.model_step(batch)
-
-        loss = self.criterion(pred_masks, labels)
         
         labels_list = decollate_batch(labels)
         outputs_list = decollate_batch(pred_masks)
@@ -251,9 +249,7 @@ class SwinUNETR_LIDC_Module(LightningModule):
         :param batch_idx: The index of the current batch.
         """
         loss, ce_loss, dice_loss, pred_masks, labels = self.model_step(batch)
-        
-        loss = self.criterion(pred_masks, labels)
-        
+                
         labels_list = decollate_batch(labels)
         outputs_list = decollate_batch(pred_masks)
         outputs_convert =  [self.post_pred(self.post_sigmoid(pred_tensor)) for pred_tensor in outputs_list]

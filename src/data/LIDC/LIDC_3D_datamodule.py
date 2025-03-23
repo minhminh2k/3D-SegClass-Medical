@@ -66,7 +66,7 @@ class LIDC_IDRI_3D_Datamodule(LightningDataModule):
     def __init__(
         self,
         data_nodule_dir: str = "/data/hpc/dqm/lidc-preprocessing/data/Image",
-        data_lung_dir: str = "/data/hpc/dqm/lidc-preprocessing/data/Lung_Segmentation",
+        data_lung_dir: str = "/data/hpc/dqm/lidc-preprocessing/data/Lung_Segmentation_v2",
         data_clean_dir: str = "/data/hpc/dqm/lidc-preprocessing/data/Clean/Image",
         train_val_test_split: Tuple[int, int, int] = (8, 1, 1),
         data_type: Literal["image", "lung"] = "image", 

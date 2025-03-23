@@ -5,7 +5,7 @@ defaults:
   - transform_val: lidc_3d.yaml
 
 data_nodule_dir: "/data/hpc/dqm/3D-SegClass-Medical/data/Image"
-data_lung_dir: "/data/hpc/dqm/3D-SegClass-Medical/data/Lung_Segmentation"
+data_lung_dir: "/data/hpc/dqm/3D-SegClass-Medical/data/Lung_Segmentation_v2"
 data_clean_dir: "/data/hpc/dqm/3D-SegClass-Medical/data/Clean/Image"
 
 train_val_test_split: [80, 10, 10]

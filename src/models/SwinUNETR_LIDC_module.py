@@ -4,13 +4,12 @@ import torch
 import logging
 from lightning import LightningModule
 from torchmetrics import MaxMetric, MeanMetric
-from torchmetrics import Dice, JaccardIndex, MaxMetric, MeanMetric
 from monai.transforms import (
     AsDiscrete,
     Activations,
 )
 from monai.data import decollate_batch
-from monai.metrics import DiceMetric
+from monai.metrics import DiceMetric, MeanIoU
 from monai.utils.enums import MetricReduction
 
 logging.basicConfig(
@@ -58,6 +57,8 @@ class SwinUNETR_LIDC_Module(LightningModule):
         optimizer: torch.optim.Optimizer,
         scheduler: torch.optim.lr_scheduler,
         criterion: torch.nn.Module,
+        dice_loss: torch.nn.Module,
+        ce_loss: torch.nn.Module,
         compile: bool,
         roi_size: Tuple[int, int, int] = [128, 128, 128],
         sw_batch_size: int = 4,
@@ -80,28 +81,40 @@ class SwinUNETR_LIDC_Module(LightningModule):
 
         # loss function
         self.criterion = criterion
+        self.ce_loss = ce_loss
+        self.dice_loss = dice_loss
         
         # Post processing each class
         self.post_sigmoid = Activations(sigmoid=True)
         self.post_pred = AsDiscrete(argmax=False, threshold=0.5)
         
         # metric objects for calculating and averaging accuracy across batches
-        self.train_metric = DiceMetric(include_background=False, reduction=MetricReduction.MEAN)
-        self.val_metric = DiceMetric(include_background=False, reduction=MetricReduction.MEAN)
-        self.test_metric = DiceMetric(include_background=False, reduction=MetricReduction.MEAN)
+        self.train_dice = DiceMetric(include_background=False, reduction=MetricReduction.MEAN)
+        self.val_dice = DiceMetric(include_background=False, reduction=MetricReduction.MEAN)
+        self.test_dice = DiceMetric(include_background=False, reduction=MetricReduction.MEAN)
         
-        # self.train_metric = Dice(average='micro', num_classes=self.hparams.num_classes) # , ignore_index=0)
-        # self.val_metric = Dice(average='micro', num_classes=self.hparams.num_classes) # , ignore_index=0)
-        # self.test_metric = Dice(average='micro', num_classes=self.hparams.num_classes) # , ignore_index=0)
-
+        self.train_jaccard = MeanIoU(include_background=False, reduction=MetricReduction.MEAN)
+        self.val_jaccard = MeanIoU(include_background=False, reduction=MetricReduction.MEAN)
+        self.test_jaccard = MeanIoU(include_background=False, reduction=MetricReduction.MEAN)
+        
         # for averaging loss across batches
         self.train_loss = MeanMetric()
         self.val_loss = MeanMetric()
         self.test_loss = MeanMetric()
+        
+        self.train_ce_loss = MeanMetric()
+        self.val_ce_loss = MeanMetric()
+        self.test_ce_loss = MeanMetric()
+        
+        self.train_dice_loss = MeanMetric()
+        self.val_dice_loss = MeanMetric()
+        self.test_dice_loss = MeanMetric()
 
         # for tracking best so far validation accuracy
-        self.val_metric_best = MaxMetric()
-        self.test_metric_best = MaxMetric()
+        self.val_dice_best = MaxMetric()
+        self.val_jaccard_best = MaxMetric()
+        self.test_dice_best = MaxMetric()
+        self.test_jaccard_best = MaxMetric()
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Perform a forward pass through the model `self.net`.
@@ -116,8 +129,12 @@ class SwinUNETR_LIDC_Module(LightningModule):
         # by default lightning executes validation step sanity checks before training starts,
         # so it's worth to make sure validation metrics don't store results from these checks
         self.val_loss.reset()
-        self.val_metric.reset()
-        self.val_metric_best.reset()
+        self.val_ce_loss.reset()
+        self.val_dice_loss.reset()
+        self.val_dice.reset()
+        self.val_jaccard.reset()
+        self.val_dice_best.reset()
+        self.val_jaccard_best.reset()
 
     def model_step(
         self, batch: Any
@@ -139,7 +156,10 @@ class SwinUNETR_LIDC_Module(LightningModule):
         logits = self.forward(image) # [batch, 1, 128, 128, 128]
         
         loss = self.criterion(logits, target)
-        return loss, logits, target
+        ce_loss = self.ce_loss(logits, target)
+        dice_loss = self.dice_loss(logits, target)
+        
+        return loss, ce_loss, dice_loss, logits, target
 
     def training_step(
         self, batch: Tuple[torch.Tensor, torch.Tensor], batch_idx: int
@@ -151,7 +171,7 @@ class SwinUNETR_LIDC_Module(LightningModule):
         :param batch_idx: The index of the current batch.
         :return: A tensor of losses between model predictions and targets.
         """
-        loss, pred_masks, gt_masks = self.model_step(batch)
+        loss, ce_loss, dice_loss, pred_masks, gt_masks = self.model_step(batch)
             
         labels_list = decollate_batch(gt_masks)
         outputs_list = decollate_batch(pred_masks)
@@ -159,22 +179,31 @@ class SwinUNETR_LIDC_Module(LightningModule):
         
         # update and log metrics
         self.train_loss(loss)
-        train_dice = self.train_metric(y_pred=outputs_convert, y=labels_list)
+        self.train_ce_loss(ce_loss)
+        self.train_dice_loss(dice_loss)
+        
+        _ = self.train_dice(y_pred=outputs_convert, y=labels_list)
+        _ = self.train_jaccard(y_pred=outputs_convert, y=labels_list)
         
         # logging.info(f"Training Step: {train_dice}") # Ex: tensor([[0.6667]], device='cuda:0')
         
         self.log("train/loss", self.train_loss, on_step=False, on_epoch=True, prog_bar=True)
-        self.log("train/dice", train_dice[0][0], on_step=False, on_epoch=True, prog_bar=True)
+        self.log("train/ce_loss", self.ce_loss, on_step=False, on_epoch=True, prog_bar=True)
+        self.log("train/dice_loss", self.dice_loss, on_step=False, on_epoch=True, prog_bar=True)
 
         # return loss or backpropagation will fail
         return loss
 
     def on_train_epoch_end(self) -> None:
         "Lightning hook that is called when a training epoch ends."
-        acc1 = self.train_metric.aggregate().item()  # get current val acc        
-        self.train_metric.reset()
+        acc_train = self.train_dice.aggregate().item()  # get current val acc        
+        self.train_dice.reset()
         
-        self.log("train/dice_epoch", acc1, sync_dist=True, prog_bar=True)
+        acc_jaccard = self.train_jaccard.aggregate().item()  # get current val acc        
+        self.train_jaccard.reset()
+        
+        self.log("train/dice_epoch", acc_train, sync_dist=True, prog_bar=True)
+        self.log("train/jaccard_epoch", acc_jaccard, sync_dist=True, prog_bar=True)
 
     def validation_step(self, batch: Tuple[torch.Tensor, torch.Tensor], batch_idx: int) -> None:
         """Perform a single validation step on a batch of data from the validation set.
@@ -183,9 +212,7 @@ class SwinUNETR_LIDC_Module(LightningModule):
             labels.
         :param batch_idx: The index of the current batch.
         """
-        loss, pred_masks, labels = self.model_step(batch)
-
-        loss = self.criterion(pred_masks, labels)
+        loss, ce_loss, dice_loss, pred_masks, labels = self.model_step(batch)
         
         labels_list = decollate_batch(labels)
         outputs_list = decollate_batch(pred_masks)
@@ -193,25 +220,33 @@ class SwinUNETR_LIDC_Module(LightningModule):
         outputs_convert =  [self.post_pred(self.post_sigmoid(pred_tensor)) for pred_tensor in outputs_list]
 
         # update and log metrics
-        self.val_loss(loss) 
-        val_dice = self.val_metric(y_pred=outputs_convert, y=labels_list)
+        self.val_loss(loss)
+        self.val_ce_loss(ce_loss)
+        self.val_dice_loss(dice_loss)
+        
+        _ = self.val_dice(y_pred=outputs_convert, y=labels_list)
+        _ = self.val_jaccard(y_pred=outputs_convert, y=labels_list)
                 
         self.log("val/loss", self.val_loss, on_step=False, on_epoch=True, prog_bar=True)
-        self.log("val/dice", val_dice[0][0], on_step=False, on_epoch=True, prog_bar=True)
+        self.log("val/ce_loss", self.val_ce_loss, on_step=False, on_epoch=True, prog_bar=True)
+        self.log("val/dice_loss", self.val_dice_loss, on_step=False, on_epoch=True, prog_bar=True)
         
         return {"loss": loss, "preds": pred_masks, "targets": labels}
         
     def on_validation_epoch_end(self) -> None:
         "Lightning hook that is called when a validation epoch ends."
-        acc1 = self.val_metric.aggregate().item()  # get current val acc
-                
-        self.val_metric.reset()
+        acc_dice = self.val_dice.aggregate().item()  # get current val acc    
+        self.val_dice.reset()
+        self.val_dice_best(acc_dice)  # update best so far val acc
         
-        self.val_metric_best(acc1)  # update best so far val acc
+        acc_jaccard = self.val_jaccard.aggregate().item()  # get current val acc    
+        self.val_jaccard.reset()
+        self.val_jaccard_best(acc_jaccard)  # update best so far val acc
 
         # log `val_acc_best` as a value through `.compute()` method, instead of as a metric object
         # otherwise metric would be reset by lightning after each epoch
-        self.log("val/dice_best", self.val_metric_best.compute(), sync_dist=True, prog_bar=True)
+        self.log("val/dice_best", self.val_dice_best.compute(), sync_dist=True, prog_bar=True)
+        self.log("val/jaccard_best", self.val_jaccard_best.compute(), sync_dist=True, prog_bar=True)
         
 
     def test_step(self, batch: Tuple[torch.Tensor, torch.Tensor], batch_idx: int) -> None:
@@ -221,32 +256,39 @@ class SwinUNETR_LIDC_Module(LightningModule):
             labels.
         :param batch_idx: The index of the current batch.
         """
-        loss, pred_masks, labels = self.model_step(batch)
-        
-        loss = self.criterion(pred_masks, labels)
-        
+        loss, ce_loss, dice_loss, pred_masks, labels = self.model_step(batch)
+                
         labels_list = decollate_batch(labels)
         outputs_list = decollate_batch(pred_masks)
         outputs_convert =  [self.post_pred(self.post_sigmoid(pred_tensor)) for pred_tensor in outputs_list]
 
         # update and log metrics
         self.test_loss(loss)
-        test_dice = self.test_metric(y_pred=outputs_convert, y=labels_list)
+        self.test_ce_loss(ce_loss)
+        self.test_dice_loss(dice_loss)
+        
+        _ = self.test_dice(y_pred=outputs_convert, y=labels_list)
+        _ = self.test_jaccard(y_pred=outputs_convert, y=labels_list)
         
         self.log("test/loss", self.test_loss, on_step=False, on_epoch=True, prog_bar=True)
-        
-        self.log("test/dice", test_dice[0][0], on_step=False, on_epoch=True, prog_bar=True) # whole tumor
+        self.log("test/ce_loss", self.test_ce_loss, on_step=False, on_epoch=True, prog_bar=True)
+        self.log("test/dice_loss", self.test_dice_loss, on_step=False, on_epoch=True, prog_bar=True)
         
         return {"loss": loss, "preds": pred_masks, "targets": labels}
         
     def on_test_epoch_end(self) -> None:
         """Lightning hook that is called when a test epoch ends."""
-        acc1 = self.test_metric.aggregate().item()  # get current val acc
-        self.test_metric.reset()
+        acc_dice = self.test_dice.aggregate().item()  # get current val acc
+        self.test_dice.reset()
+        self.test_dice_best(acc_dice)
         
-        self.test_metric_best(acc1)
+        acc_jaccard = self.test_jaccard.aggregate().item()  # get current val acc
+        self.test_jaccard.reset()
+        self.test_jaccard_best(acc_jaccard)
         
-        self.log("test/dice_best", self.test_metric_best.compute(), sync_dist=True, prog_bar=True)
+        self.log("test/dice", self.test_dice_best.compute(), sync_dist=True, prog_bar=True)
+        self.log("test/jaccard", self.test_jaccard_best.compute(), sync_dist=True, prog_bar=True)
+        
 
     def setup(self, stage: str) -> None:
         """Lightning hook that is called at the beginning of fit (train + validate), validate,

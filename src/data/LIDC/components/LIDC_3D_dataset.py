@@ -74,7 +74,7 @@ class LIDC_IDRI_3D_Dataset(Dataset):
         else:
             for dicom_path in self.data_nodule_dir:
                 # Get mask path of nodule image
-                mask_path = dicom_path.replace("Lung_Segmentation", "Mask")
+                mask_path = dicom_path.replace("Lung_Segmentation_v2", "Mask")
                 mask_path = mask_path.replace("NI", "MA")
 
                 # Nodule Mask
