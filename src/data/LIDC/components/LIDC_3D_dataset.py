@@ -4,7 +4,7 @@ import logging
 import collections.abc
 import numpy as np
 
-from typing import Sequence, Callable, Any
+from typing import Sequence, Callable, Any, Literal
 from torch.utils.data import Dataset, Subset
 from monai.transforms import Compose
 
@@ -18,8 +18,9 @@ class LIDC_IDRI_3D_Dataset(Dataset):
     def __init__(
         self, 
         data_nodule_dir: list[str],
-        data_clean_dir: list[str],
-        transform: Callable | None = None
+        data_clean_dir: list[str] = [],
+        transform: Callable | None = None,
+        data_type: Literal["image", "lung"] = "image"
     ) -> None:
         """
         Args:
@@ -29,6 +30,7 @@ class LIDC_IDRI_3D_Dataset(Dataset):
         """
         self.data_nodule_dir = data_nodule_dir
         self.data_clean_dir = data_clean_dir
+        self.data_type = data_type
         self.data_list = self._get_file_list()
         
         try:
@@ -38,39 +40,64 @@ class LIDC_IDRI_3D_Dataset(Dataset):
     
     def _get_file_list(self) -> list:
         file_list = []
-        for dicom_path in self.data_nodule_dir:
-            # Get mask path of nodule image
-            mask_path = dicom_path.replace("Image", "Mask")
-            mask_path = mask_path.replace("NI", "MA")
-
-            # Check whether mask path exist
-            if os.path.exists(mask_path):
-                data = {
-                    'image': dicom_path,
-                    'label': mask_path
-                }
-                file_list.append(data)
-            else:
-                logging.error(f"Path {mask_path} does not exist.")
         
-        for dicom_path in self.data_clean_dir:
-            # Get mask path of nodule image
-            mask_path = dicom_path.replace("Image", "Mask")
-            mask_path = mask_path.replace("CN", "CM")
+        if self.data_type == "image":
+            for dicom_path in self.data_nodule_dir:
+                # Get mask path of nodule image
+                mask_path = dicom_path.replace("Image", "Mask")
+                mask_path = mask_path.replace("NI", "MA")
 
-            # Check whether mask path exist
-            if os.path.exists(mask_path):
-                data = {
-                    'image': dicom_path,
-                    'label': mask_path
-                }
-                file_list.append(data)
-            else:
-                logging.error(f"Path {mask_path} does not exist.")
-        
+                # Check whether mask path exist
+                if os.path.exists(mask_path):
+                    data = {
+                        'image': dicom_path,
+                        'label': mask_path
+                    }
+                    file_list.append(data)
+                else:
+                    logging.error(f"Path {mask_path} does not exist.")
+            
+            for dicom_path in self.data_clean_dir:
+                # Get mask path of nodule image
+                mask_path = dicom_path.replace("Image", "Mask")
+                mask_path = mask_path.replace("CN", "CM")
+
+                # Check whether mask path exist
+                if os.path.exists(mask_path):
+                    data = {
+                        'image': dicom_path,
+                        'label': mask_path
+                    }
+                    file_list.append(data)
+                else:
+                    logging.error(f"Path {mask_path} does not exist.")
+        else:
+            for dicom_path in self.data_nodule_dir:
+                # Get mask path of nodule image
+                mask_path = dicom_path.replace("Lung_Segmentation", "Mask")
+                mask_path = mask_path.replace("NI", "MA")
+
+                # Nodule Mask
+                if os.path.exists(mask_path):
+                    data = {
+                        'image': dicom_path,
+                        'label': mask_path
+                    }
+                    file_list.append(data)
+                else:
+                    # Clean Mask
+                    mask_path = mask_path.replace("Mask", "Clean/Mask")
+                    mask_path = mask_path.replace("CN", "CM")
+                    
+                    data = {
+                        'image': dicom_path,
+                        'label': mask_path
+                    }
+                    file_list.append(data)
+            
         # Seed
-        np.random.seed(42)
-        file_list = np.random.permutation(file_list)
+        # np.random.seed(42)
+        # file_list = np.random.permutation(file_list)
 
         return file_list
     

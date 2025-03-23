@@ -4,17 +4,22 @@ defaults:
   - transform_train: lidc_3d.yaml
   - transform_val: lidc_3d.yaml
 
-# data_nodule_dir: "/data/hpc/dqm/lidc-preprocessing/data/Image"
-# data_clean_dir: "/data/hpc/dqm/lidc-preprocessing/data/Clean/Image"
 data_nodule_dir: "/data/hpc/dqm/3D-SegClass-Medical/data/Image"
+data_lung_dir: "/data/hpc/dqm/3D-SegClass-Medical/data/Lung_Segmentation"
 data_clean_dir: "/data/hpc/dqm/3D-SegClass-Medical/data/Clean/Image"
-train_val_test_split: [70, 15, 15]
 
-image_size: [128, 256, 256]
+train_val_test_split: [80, 10, 10]
+image_size: [128, 128, 128]
 
-batch_size: 4 # SAM3D: 4
+num_nodule_samples: 2000
+num_lung_samples: 2000
+num_clean_samples: 1000
+
+data_type: "lung" # image
+num_classes: 2
+
+samples: 1
+batch_size: 1 # SAM3D: batch 3 sample 1 -> 14Gb ---- SwinUNETR: batch 1 sample 1
 num_workers: 2
 pin_memory: False
-num_nodule_samples: 2000
-num_clean_samples: 1000
-num_classes: 2
+

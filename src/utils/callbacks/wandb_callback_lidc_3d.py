@@ -7,9 +7,8 @@ import wandb
 import logging
 import numpy as np
 import lightning as pl
-import torch.nn.functional as F
 from io import BytesIO
-import nibabel as nib
+from typing import Literal
 from monai import transforms
 from monai.transforms import Compose
 from PIL import Image
@@ -25,17 +24,17 @@ logging.basicConfig(
 class LIDC_3D_Callback(Callback):
     def __init__(
         self,
-        data_nodule_dir: str = "/data/hpc/dqm/lidc-preprocessing/data/Image",
-        data_clean_dir: str = "/data/hpc/dqm/lidc-preprocessing/data/Clean/Image",
+        data_nodule_dir: str = "/data/hpc/dqm/3D-SegClass-Medical/data/Image",
+        data_lung_dir: str = "/data/hpc/dqm/3D-SegClass-Medical/data/Lung_Segmentation",
+        data_clean_dir: str = "/data/hpc/dqm/3D-SegClass-Medical/data/Clean/Image",
+        data_type: Literal["image", 'lung'] = "image",
         n_images_to_log: int = 5,
-        roi_size: tuple = [128, 512, 512],
+        roi_size: tuple = [128, 128, 128],
         num_classes: int = 2,
         classes_name: tuple[str] = ["Lung Nodule"],
         colors: tuple[str] = ["#00FF00", "#FFFF1E"],
         case_names: tuple[str] = [ "0068", "0027", "0050", "0061", "0074", "0101", "0117"],
         number_of_logged_samples: int = 2,
-        min_px: int = -1000,
-        max_px: int = 400
     ):
         self.num_classes = num_classes
         self.roi_size = roi_size
@@ -44,22 +43,35 @@ class LIDC_3D_Callback(Callback):
         
         self.data_nodule_dir = data_nodule_dir
         self.data_clean_dir = data_clean_dir
+        self.data_lung_dir = data_lung_dir
         self.case_names = case_names
+        self.data_type = data_type
         
         self.n_images_to_log = n_images_to_log
         self.number_of_logged_samples = number_of_logged_samples
         
-        self.min_px = min_px
-        self.max_px = max_px
-        
         self.n_samples_validation = []
         self.n_samples_test = []
 
-        self.image_dict = [{
-            "case": i,
-            'image': f'{self.data_nodule_dir}/LIDC-IDRI-{i}/{i}_NI001.npy',
-            'label': f'{self.data_nodule_dir}/LIDC-IDRI-{i}/{i}_MA001.npy'.replace('Image', 'Mask')
-        } for i in self.case_names]
+        self.image_dict = []
+        
+        for i in self.case_names:
+            if self.data_type == "image":
+                self.image_dict.append(
+                    {
+                        "case": i,
+                        'image': f'{self.data_nodule_dir}/LIDC-IDRI-{i}/{i}_NI001.npy',
+                        'label': f'{self.data_nodule_dir}/LIDC-IDRI-{i}/{i}_MA001.npy'.replace('Image', 'Mask')
+                    }
+                )
+            else:
+                self.image_dict.append(
+                    {
+                        "case": i,
+                        'image': f'{self.data_lung_dir}/LIDC-IDRI-{i}/{i}_NI001.npy',
+                        'label': f'{self.data_lung_dir}/LIDC-IDRI-{i}/{i}_MA001.npy'.replace('Lung_Segmentation', 'Mask')
+                    }
+                )
         
         self.image_dict = random.sample(self.image_dict, len(self.image_dict))
 

@@ -16,9 +16,21 @@ transforms:
     spatial_size: [128, 256, 256]
     pos: 2
     neg: 1
-    num_samples: 1 # number of cropped samples
+    num_samples: ${data.samples} # number of cropped samples
     image_key: "image"
     image_threshold: 0
+  
+  - _target_: monai.transforms.RandFlipd
+    keys: ["image", "label"]
+    prob: 0.2
+    spatial_axis: 0
+
+  - _target_: monai.transforms.RandAffined
+    keys: ["image", "label"]
+    prob: 0.2
+    rotate_range: [0.1, 0.1, 0.1]
+    scale_range: [0.02, 0.02, 0.02]
+    mode: ["trilinear", "nearest"]
 
   - _target_: monai.transforms.Resized
     keys: ["image", "label"]
