@@ -314,6 +314,3 @@ class LIDC_IDRI_3D_Datamodule(LightningDataModule):
         """
         pass
 
-
-if __name__ == "__main__":
-    _ = MonBraTsDataModule()

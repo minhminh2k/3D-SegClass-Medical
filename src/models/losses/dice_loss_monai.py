@@ -7,9 +7,9 @@ Implementation of Dice Loss from https://github.com/Mr-TalhaIlyas/Loss-Functions
 """
 
 class DiceLossMonAI(nn.Module):
-    def __init__(self, to_onehot: bool, sigmoid: bool, softmax: bool, include_background: bool):
+    def __init__(self, to_onehot_y: bool, sigmoid: bool, softmax: bool, include_background: bool=False):
         super().__init__()
-        self._loss = losses.DiceLoss(to_onehot_y=to_onehot, sigmoid=sigmoid, softmax=softmax, include_background=include_background)
+        self._loss = losses.DiceLoss(to_onehot_y=to_onehot_y, sigmoid=sigmoid, softmax=softmax, include_background=include_background)
 
     def forward(self, predicted, target):
         loss = self._loss(predicted, target)

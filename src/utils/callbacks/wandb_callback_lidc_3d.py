@@ -25,7 +25,7 @@ class LIDC_3D_Callback(Callback):
     def __init__(
         self,
         data_nodule_dir: str = "/data/hpc/dqm/3D-SegClass-Medical/data/Image",
-        data_lung_dir: str = "/data/hpc/dqm/3D-SegClass-Medical/data/Lung_Segmentation",
+        data_lung_dir: str = "/data/hpc/dqm/3D-SegClass-Medical/data/Lung_Segmentation_v2",
         data_clean_dir: str = "/data/hpc/dqm/3D-SegClass-Medical/data/Clean/Image",
         data_type: Literal["image", 'lung'] = "image",
         n_images_to_log: int = 5,
@@ -69,7 +69,7 @@ class LIDC_3D_Callback(Callback):
                     {
                         "case": i,
                         'image': f'{self.data_lung_dir}/LIDC-IDRI-{i}/{i}_NI001.npy',
-                        'label': f'{self.data_lung_dir}/LIDC-IDRI-{i}/{i}_MA001.npy'.replace('Lung_Segmentation', 'Mask')
+                        'label': f'{self.data_lung_dir}/LIDC-IDRI-{i}/{i}_MA001.npy'.replace('Lung_Segmentation_v2', 'Mask')
                     }
                 )
         

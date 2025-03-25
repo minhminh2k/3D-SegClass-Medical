@@ -11,6 +11,7 @@ from monai.transforms import (
 from monai.data import decollate_batch
 from monai.metrics import DiceMetric, MeanIoU
 from monai.utils.enums import MetricReduction
+from monai.transforms import RandSpatialCropd
 
 logging.basicConfig(
     level=logging.INFO,
@@ -188,8 +189,8 @@ class SwinUNETR_LIDC_Module(LightningModule):
         # logging.info(f"Training Step: {train_dice}") # Ex: tensor([[0.6667]], device='cuda:0')
         
         self.log("train/loss", self.train_loss, on_step=False, on_epoch=True, prog_bar=True)
-        self.log("train/ce_loss", self.ce_loss, on_step=False, on_epoch=True, prog_bar=True)
-        self.log("train/dice_loss", self.dice_loss, on_step=False, on_epoch=True, prog_bar=True)
+        self.log("train/ce_loss", self.train_ce_loss, on_step=False, on_epoch=True, prog_bar=True)
+        self.log("train/dice_loss", self.train_dice_loss, on_step=False, on_epoch=True, prog_bar=True)
 
         # return loss or backpropagation will fail
         return loss
