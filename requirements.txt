@@ -44,7 +44,7 @@ tensorboardX==2.6.2.2
 timm==1.0.12
 
 accelerate==1.2.1
-datasets==2.19.2
+datasets==3.5.0
 batchgenerators==0.25.1
 simpleitk==2.4.0
 typing==3.7.4.3
