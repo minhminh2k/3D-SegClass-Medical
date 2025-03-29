@@ -11,7 +11,7 @@ from monai.transforms import (
 from monai.data import decollate_batch
 from monai.metrics import DiceMetric, MeanIoU
 from monai.utils.enums import MetricReduction
-from monai.transforms import RandSpatialCropd
+from monai.losses import DiceCELoss
 
 logging.basicConfig(
     level=logging.INFO,
@@ -116,6 +116,7 @@ class SwinUNETR_LIDC_Module(LightningModule):
         self.val_jaccard_best = MaxMetric()
         self.test_dice_best = MaxMetric()
         self.test_jaccard_best = MaxMetric()
+        
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Perform a forward pass through the model `self.net`.
@@ -159,7 +160,7 @@ class SwinUNETR_LIDC_Module(LightningModule):
         loss = self.criterion(logits, target)
         ce_loss = self.ce_loss(logits, target)
         dice_loss = self.dice_loss(logits, target)
-        
+                
         return loss, ce_loss, dice_loss, logits, target
 
     def training_step(

@@ -5,7 +5,8 @@ defaults:
   - scheduler: warmup_cosine.yaml
 
 ce_loss: 
-  _target_: src.models.losses.CE_loss.CrossEntropyLoss
+  _target_: src.models.losses.CE_loss.CELossMonAI
+  reduction: mean
 
 dice_loss: 
   _target_: src.models.losses.dice_loss_monai.DiceLossMonAI

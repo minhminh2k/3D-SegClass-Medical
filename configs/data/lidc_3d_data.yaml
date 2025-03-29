@@ -19,7 +19,11 @@ data_type: "lung" # image
 num_classes: 2
 
 samples: 1
-batch_size: 1 # SAM3D: batch 3 sample 1 -> 14Gb ---- SwinUNETR: batch 1 sample 1
-num_workers: 2
+batch_size: 1
+# SAM3D: batch 3 sample 1 
+# SwinUNETR: batch 1 sample 1 -> 14 Gb
+# UNETR++: batch 4 -> 14.3 Gb
+
+num_workers: 8
 pin_memory: False
 

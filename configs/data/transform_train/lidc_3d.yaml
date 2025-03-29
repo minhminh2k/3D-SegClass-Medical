@@ -14,7 +14,7 @@ transforms:
   #   keys: ["image", "label"]
   #   label_key: "label"
   #   spatial_size: [128, 256, 256]
-  #   pos: 1
+  #   pos: 3
   #   neg: 1
   #   num_samples: ${data.samples} # number of cropped samples
   #   image_key: "image"

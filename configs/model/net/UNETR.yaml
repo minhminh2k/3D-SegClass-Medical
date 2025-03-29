@@ -1,4 +1,4 @@
-_target_: src.models.unetr.components.UNETR.UNETR
+_target_: src.models.unetr.UNETR.UNETR
 
 img_size: ${data.image_size} # [96, 96, 96]
 in_channels: 1

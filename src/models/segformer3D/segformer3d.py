@@ -106,7 +106,7 @@ if __name__ == "__main__":
     input = torch.randint(
         low=0,
         high=255,
-        size=(2, 4, 128, 128, 128),
+        size=(1, 1, 64, 64, 64),
         dtype=torch.float,
     ).to(device)
     segformer3D = SegFormer3D(num_classes=1).to(device)

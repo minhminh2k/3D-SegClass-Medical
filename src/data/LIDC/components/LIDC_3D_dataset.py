@@ -32,6 +32,7 @@ class LIDC_IDRI_3D_Dataset(Dataset):
         self.data_clean_dir = data_clean_dir
         self.data_type = data_type
         self.data_list = self._get_file_list()
+        logging.info(f"Length of the LIDC dataset: {len(self.data_list)}")
         
         try:
             self.transform = Compose(transform) if not isinstance(transform, Compose) else transform
@@ -73,32 +74,44 @@ class LIDC_IDRI_3D_Dataset(Dataset):
                     logging.error(f"Path {mask_path} does not exist.")
         else:
             for dicom_path in self.data_nodule_dir:
+                # Get lung path
+                lung_path = dicom_path.replace("Image", "Lung_Segmentation_v2")
+                
                 # Get mask path of nodule image
-                mask_path = dicom_path.replace("Lung_Segmentation_v2", "Mask")
+                mask_path = dicom_path.replace("Image", "Mask")
                 mask_path = mask_path.replace("NI", "MA")
 
                 # Nodule Mask
-                if os.path.exists(mask_path):
+                if os.path.exists(mask_path) and os.path.exists(lung_path):
                     data = {
-                        'image': dicom_path,
+                        'image': lung_path,
                         'label': mask_path
                     }
                     file_list.append(data)
-                else:
-                    # Clean Mask
-                    mask_path = mask_path.replace("Mask", "Clean/Mask")
-                    mask_path = mask_path.replace("CN", "CM")
+                # else:
+                #     logging.error(f"Path {lung_path} or {mask_path} does not exist.")
                     
+            for dicom_path in self.data_clean_dir:
+                # Get lung path
+                lung_path = dicom_path.replace("Clean/Image", "Lung_Segmentation_v2")
+                
+                # Get mask path of nodule image
+                mask_path = dicom_path.replace("Image", "Mask")
+                mask_path = mask_path.replace("CN", "CM")
+
+                # Check whether mask path exist
+                if os.path.exists(mask_path) and os.path.exists(lung_path):
                     data = {
-                        'image': dicom_path,
+                        'image': lung_path,
                         'label': mask_path
                     }
                     file_list.append(data)
+                # else:
+                #     logging.error(f"Path {lung_path}  or {mask_path} does not exist.")
             
         # Seed
         # np.random.seed(42)
         # file_list = np.random.permutation(file_list)
-
         return file_list
     
     def __len__(self) -> int:

@@ -1,118 +1,198 @@
-import os
-import nibabel as nib
-import matplotlib.pyplot as plt
-import numpy as np
-import pickle
-from PIL import Image
-import imageio
-import pydicom
-import SimpleITK as sitk
+import torch
+from torch import nn
+from typing import Tuple, Union
+from src.models.unetr_pp.components.neural_network import SegmentationNetwork
+from src.models.unetr_pp.components.dynunet_block import UnetOutBlock, UnetResBlock
+from src.models.unetr_pp.model_components import UnetrPPEncoder, UnetrUpBlock
 
-def load_npy(file_path: str):
-    return np.load(file_path)
+class UNETR_PP(SegmentationNetwork):
+    """
+    UNETR++ based on: "Shaker et al.,
+    UNETR++: Delving into Efficient and Accurate 3D Medical Image Segmentation"
+    """
 
-def load_npz(file_path: str):
-    data = np.load(file_path)
-    return data
+    def __init__(
+        self,
+        in_channels: int = 1,
+        out_channels: int = 1,
+        img_size: tuple = [64, 128, 128],
+        patch_size: tuple = [4, 4, 4],
+        feature_size: int = 16,
+        hidden_size: int = 256,
+        num_heads: int = 4,
+        pos_embed: str = "perceptron",  # TODO: Remove the argument
+        norm_name: Union[Tuple, str] = "instance",
+        dropout_rate: float = 0.0,
+        depths: tuple = [3, 3, 3, 3],
+        dims: tuple = [32, 64, 128, 256],
+        conv_op = nn.Conv3d,
+        do_ds=True, # Using deep super vision -> output: list
+    ) -> None:
+        """
+        Args:
+            in_channels: dimension of input channels.
+            out_channels: dimension of output channels.
+            img_size: dimension of input image.
+            feature_size: dimension of network feature size.
+            hidden_size: dimension of  the last encoder.
+            num_heads: number of attention heads.
+            pos_embed: position embedding layer type.
+            norm_name: feature normalization type and arguments.
+            dropout_rate: faction of the input units to drop.
+            depths: number of blocks for each stage.
+            dims: number of channel maps for the stages.
+            conv_op: type of convolution operation.
+            do_ds: use deep supervision to compute the loss.
 
-def load_pickle(file_path: str):
-    with open(file_path, "rb") as f:
-        data = pickle.load(f) 
-    return data
+        Examples::
 
-def load_nib(file_path: str):
-    nii_data = nib.load(file_path)
+            # for single channel input 4-channel output with patch size of (64, 128, 128), feature size of 16, batch
+            norm and depths of [3, 3, 3, 3] with output channels [32, 64, 128, 256], 4 heads, and 14 classes with
+            deep supervision:
+            >>> net = UNETR_PP(in_channels=1, out_channels=14, img_size=(64, 128, 128), feature_size=16, num_heads=4,
+            >>>                 norm_name='batch', depths=[3, 3, 3, 3], dims=[32, 64, 128, 256], do_ds=True)
+        """
 
-    image_data = nii_data.get_fdata()
-    return image_data
+        super().__init__()
+        if depths is None:
+            depths = [3, 3, 3, 3]
+        self.do_ds = do_ds
+        self.conv_op = conv_op
+        self.num_classes = out_channels
+        if not (0 <= dropout_rate <= 1):
+            raise AssertionError("dropout_rate should be between 0 and 1.")
 
-def save_nib(file_path: str, volume):
-    ct_image = sitk.GetImageFromArray(volume)
-    sitk.WriteImage(ct_image, file_path)
+        if pos_embed not in ["conv", "perceptron"]:
+            raise KeyError(f"Position embedding layer of type {pos_embed} is not supported.")
 
-def load_dcom(file_path: str):
-    return pydicom.dcmread(file_path)
+        self.feat_size = (
+            img_size[0]
+            // patch_size[0]
+            // 8,  # 8 is the downsampling happened through the four encoders stages
+            img_size[1]
+            // patch_size[1]
+            // 8,  # 8 is the downsampling happened through the four encoders stages
+            img_size[2]
+            // patch_size[2]
+            // 8,  # 8 is the downsampling happened through the four encoders stages
+        )
+        self.hidden_size = hidden_size
 
-def scale_image(image):
-    min_val = np.min(image)
-    max_val = np.max(image)
-    if max_val - min_val == 0:
-        return np.zeros_like(image, dtype=np.uint8)
-    
-    scaled_image = (image - min_val) / (max_val - min_val) * 255
-    
-    return scaled_image.astype(np.uint8)
+        self.unetr_pp_encoder = UnetrPPEncoder(
+            input_size=[
+                self.feat_size[0] * self.feat_size[1] * self.feat_size[2] * (2 ** (3 - i)) ** 3
+                for i in range(4)
+            ],
+            patch_size=patch_size,
+            dims=dims,
+            depths=depths,
+            num_heads=num_heads,
+        )
 
-def normalize_image(image):
-    min_val = np.min(image)
-    max_val = np.max(image)
+        self.encoder1 = UnetResBlock(
+            spatial_dims=3,
+            in_channels=in_channels,
+            out_channels=feature_size,
+            kernel_size=3,
+            stride=1,
+            norm_name=norm_name,
+        )
+        self.decoder5 = UnetrUpBlock(
+            spatial_dims=3,
+            in_channels=feature_size * 16,
+            out_channels=feature_size * 8,
+            kernel_size=3,
+            upsample_kernel_size=2,
+            norm_name=norm_name,
+            out_size=self.feat_size[0] * self.feat_size[1] * self.feat_size[2] * 2**3,
+        )
+        self.decoder4 = UnetrUpBlock(
+            spatial_dims=3,
+            in_channels=feature_size * 8,
+            out_channels=feature_size * 4,
+            kernel_size=3,
+            upsample_kernel_size=2,
+            norm_name=norm_name,
+            out_size=self.feat_size[0] * self.feat_size[1] * self.feat_size[2] * 4**3,
+        )
+        self.decoder3 = UnetrUpBlock(
+            spatial_dims=3,
+            in_channels=feature_size * 4,
+            out_channels=feature_size * 2,
+            kernel_size=3,
+            upsample_kernel_size=2,
+            norm_name=norm_name,
+            out_size=self.feat_size[0] * self.feat_size[1] * self.feat_size[2] * 8**3,
+        )
+        self.decoder2 = UnetrUpBlock(
+            spatial_dims=3,
+            in_channels=feature_size * 2,
+            out_channels=feature_size,
+            kernel_size=3,
+            upsample_kernel_size=patch_size,
+            norm_name=norm_name,
+            out_size=img_size[0] * img_size[1] * img_size[2],
+            conv_decoder=True,
+        )
+        self.out1 = UnetOutBlock(
+            spatial_dims=3, in_channels=feature_size, out_channels=out_channels
+        )
+        if self.do_ds:
+            self.out2 = UnetOutBlock(
+                spatial_dims=3, in_channels=feature_size * 2, out_channels=out_channels
+            )
+            self.out3 = UnetOutBlock(
+                spatial_dims=3, in_channels=feature_size * 4, out_channels=out_channels
+            )
 
-    if max_val - min_val > 0:
-        image = (image - min_val) / (max_val - min_val)
+    def proj_feat(self, x, hidden_size, feat_size):
+        x = x.view(x.size(0), feat_size[0], feat_size[1], feat_size[2], hidden_size)
+        x = x.permute(0, 4, 1, 2, 3).contiguous()
+        return x
 
-    return image
+    def forward(self, x_in):
+        x_output, hidden_states = self.unetr_pp_encoder(x_in)
 
-def lung_window_clip(array: np.ndarray, min_px: int = -1200, max_px: int = 800):
-    clipped_array = array.copy()
-    clipped_array[clipped_array > max_px] = max_px
-    clipped_array[clipped_array < min_px] = min_px
-    return clipped_array
+        convBlock = self.encoder1(x_in)
 
-def plot_images(array_HU, array_Lung, title1="HU", title2="Lung"):
-    fig, axes = plt.subplots(1, 2, figsize=(10, 5))
-    axes[0].imshow(array_HU, cmap='gray')
-    axes[0].set_title(title1)
-    axes[0].axis("off")  # Hide axis
+        # Four encoders
+        enc1 = hidden_states[0]
+        enc2 = hidden_states[1]
+        enc3 = hidden_states[2]
+        enc4 = hidden_states[3]
 
-    axes[1].imshow(array_Lung, cmap='gray')
-    axes[1].set_title(title2)
-    axes[1].axis("off")  # Hide axis
+        # Four decoders
+        dec4 = self.proj_feat(enc4, self.hidden_size, self.feat_size)
+        dec3 = self.decoder5(dec4, enc3)
+        dec2 = self.decoder4(dec3, enc2)
+        dec1 = self.decoder3(dec2, enc1)
 
-def numpy_to_gif(array, folder_path="/data/hpc/dqm/3D-SegClass-Medical/assets", folder_name: str = "image", case_name: str = "3", duration=100):
-    folder_path = folder_path + "/" + folder_name
-    
-    if not os.path.exists(folder_path):
-        os.makedirs(folder_path, exists_ok=True)
-        
-    save_path_x = f"{folder_path}/{case_name}_x.gif"
-    # save_path_y = f"{folder_path}/{case_name}_y.gif"
-    # save_path_z = f"{folder_path}/{case_name}_z.gif"
-    print(save_path_x)
-    frames_x = []
-    # frames_y = []
-    # frames_z = []
-    
-    for i in range(array.shape[0]):
-        img_x = Image.fromarray(scale_image(array[i, :, :])) 
-        frames_x.append(img_x)
+        out = self.decoder2(dec1, convBlock)
+        if self.do_ds:
+            logits = [self.out1(out), self.out2(dec1), self.out3(dec2)]
+        else:
+            logits = self.out1(out)
 
-    frames_x[0].save(save_path_x, save_all=True, append_images=frames_x[1:], duration=duration, loop=0)
+        return logits
 
-def lung_window_clip_volume(pixel_array: np.ndarray, min_px: int = -1200, max_px: int = 800):
-    clipped_array = []
-    for arr in pixel_array:
-        clipped = arr.copy()
-        clipped[clipped > max_px] = max_px
-        clipped[clipped < min_px] = min_px
-        clipped_array.append(clipped)
-        
-    return np.stack(clipped_array, axis = 0)
-
-
-case_name = "0029"
-image_path = f"/data/hpc/dqm/3D-SegClass-Medical/data/Image/LIDC-IDRI-{case_name}/{case_name}_NI001.npy"
-lung_path = f"/data/hpc/dqm/3D-SegClass-Medical/data/Lung_Segmentation/LIDC-IDRI-{case_name}/{case_name}_NI001.npy"
-mask_path = f"/data/hpc/dqm/3D-SegClass-Medical/data/Mask/LIDC-IDRI-{case_name}/{case_name}_MA001.npy"
-
-image = load_npy(image_path)
-lung = load_npy(lung_path)
-mask = load_npy(mask_path) * 255
-
-print("Image, Lung, Mask Shape:", image.shape, lung.shape, mask.shape)
-print("Image, Lung, Mask Max:", image.max(), lung.max(), mask.max())
-print("Image, Lung, Mask Min:", image.min(), lung.min(), mask.min())
-
-# Convert 3D volume to LIDC Gif
-numpy_to_gif(image, case_name=f"{case_name}_image", folder_name="test")
-numpy_to_gif(lung, case_name=f"{case_name}_lung", folder_name="test")
-numpy_to_gif(mask, case_name=f"{case_name}_mask", folder_name="test")
+if __name__ == "__main__":
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    input = torch.randint(
+        low=0,
+        high=255,
+        size=(1, 1, 128, 128, 128),
+        dtype=torch.float,
+    ).to(device)
+    model = UNETR_PP(
+        in_channels=1,
+        out_channels=2,
+        img_size=[128, 128, 128],
+        patch_size=[2, 4, 4],
+        feature_size=16,
+        num_heads=4,
+        depths=[3, 3, 3, 3],
+        dims=[32, 64, 128, 256],
+        do_ds=False,
+    ).to(device)
+    with torch.no_grad():
+        output = model(input)

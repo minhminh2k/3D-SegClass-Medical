@@ -12,7 +12,7 @@ dice_loss:
   to_onehot_y: False
   sigmoid: True
   softmax: False
-  include_backfround: False
+  include_background: False
 
 optimizer:
   _target_: torch.optim.AdamW
