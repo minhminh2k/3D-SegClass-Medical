@@ -141,14 +141,15 @@ class ImageEncoderViT3D(nn.Module):
         # import pdb; pdb.set_trace()
         if self.pos_embed is not None:
             x = x + self.pos_embed
-
+        hidden_states = []
         for blk in self.blocks:
             x = blk(x)
+            hidden_states.append(x)
         # x = [1,16,16,16,768]
         x = self.neck(x.permute(0, 4, 1, 2, 3))
 
         # output_size = [1,256,16,16,16]
-        return x
+        return x, hidden_states
 
 
 class Block3D(nn.Module):
@@ -438,4 +439,3 @@ class PatchEmbed3D(nn.Module):
         # B C X Y Z -> B X Y Z C
         x = x.permute(0, 2, 3, 4, 1)
         return x
-

@@ -195,7 +195,7 @@ class LIDC_IDRI_3D_Datamodule(LightningDataModule):
             
     
     def _split_data(self, file_paths, train_val_test_split) -> Tuple[list, list, list]:
-        # np.random.seed(42) # If needed
+        np.random.seed(42) # If needed
         
         # get len files
         num_files = len(file_paths)
