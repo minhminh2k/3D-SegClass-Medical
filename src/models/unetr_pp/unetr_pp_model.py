@@ -180,13 +180,13 @@ if __name__ == "__main__":
     input = torch.randint(
         low=0,
         high=1,
-        size=(1, 1, 128, 128, 128),
+        size=(1, 1, 64, 192, 192),
         dtype=torch.float,
     )
     model = UNETR_PP(
         in_channels=1,
         out_channels=2,
-        img_size=[128, 128, 128],
+        img_size=[64, 192, 192],
         patch_size=[2, 4, 4],
         feature_size=16,
         num_heads=4,

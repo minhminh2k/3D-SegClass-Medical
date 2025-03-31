@@ -9,7 +9,8 @@ data_lung_dir: "/data/hpc/dqm/3D-SegClass-Medical/data/Lung_Segmentation_v2"
 data_clean_dir: "/data/hpc/dqm/3D-SegClass-Medical/data/Clean/Image"
 
 train_val_test_split: [80, 10, 10]
-image_size: [128, 128, 128]
+image_size: [128, 128, 128] # [64, 192, 192]
+image_size_before_resized: [128, 256, 256] # [64, 256, 256]
 
 num_nodule_samples: 2000
 num_lung_samples: 2000
@@ -17,6 +18,10 @@ num_clean_samples: 1000
 
 data_type: "lung" # image
 num_classes: 2
+
+# True -> get from Image
+# False -> get from Lung_Segmentation_v2
+nodule_clean_divide: True
 
 samples: 1
 batch_size: 1

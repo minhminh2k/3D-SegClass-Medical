@@ -73,6 +73,7 @@ class LIDC_IDRI_3D_Datamodule(LightningDataModule):
         transform_train:  Optional[Compose] = None,
         transform_val:  Optional[Compose] = None,
         image_size: tuple = [128, 128, 128],
+        image_size_before_resized: tuple = [64, 256, 256],
         batch_size: int = 2,
         num_workers: int = 0,
         pin_memory: bool = False,
@@ -81,6 +82,7 @@ class LIDC_IDRI_3D_Datamodule(LightningDataModule):
         num_clean_samples: int = 1000,
         num_classes: int = 2,
         samples: int = 1,
+        nodule_clean_divide: bool = True,
     ) -> None:
         """Initialize a `MonAIBraTsDataModule`.
 
@@ -142,7 +144,7 @@ class LIDC_IDRI_3D_Datamodule(LightningDataModule):
         # Get all the data files
 
         file_nodule_list = []
-        # file_lung_list = []
+        file_lung_list = []
         file_clean_list = []
         
         # Get nodule files
@@ -151,6 +153,17 @@ class LIDC_IDRI_3D_Datamodule(LightningDataModule):
                 if file.endswith(".npy"):
                     dicom_path = os.path.join(root, file)
                     file_nodule_list.append(dicom_path)
+        
+        # Get lung files
+        for root, _, files in os.walk(self.hparams.data_lung_dir):
+            for file in files:
+                if file.endswith(".npy"):
+                    dicom_path = os.path.join(root, file)
+                    file_lung_list.append(dicom_path)
+        file_lung_list = file_lung_list[:self.hparams.num_lung_samples] \
+            if len(file_lung_list) > self.hparams.num_lung_samples else file_lung_list
+        train_lung_dir, val_lung_dir, test_lung_dir = self._split_data(
+            file_paths=file_lung_list, train_val_test_split=self.hparams.train_val_test_split)
         
         # Get clean files
         for root, _, files in os.walk(self.hparams.data_clean_dir):
@@ -170,28 +183,58 @@ class LIDC_IDRI_3D_Datamodule(LightningDataModule):
         train_clean_dir, val_clean_dir, test_clean_dir = self._split_data(
             file_paths=file_clean_list, train_val_test_split=self.hparams.train_val_test_split)
         
-        # Transform Train
-        data_train = LIDC_IDRI_3D_Dataset(
-            data_nodule_dir=train_nodule_dir, 
-            data_clean_dir=train_clean_dir, 
-            transform=self.hparams.transform_train,
-            data_type=self.hparams.data_type
-        )
-        # Transform Val
-        data_val = LIDC_IDRI_3D_Dataset(
-            data_nodule_dir=val_nodule_dir, 
-            data_clean_dir=val_clean_dir, 
-            transform=self.hparams.transform_val,
-            data_type=self.hparams.data_type
-        )
-        data_test = LIDC_IDRI_3D_Dataset(
-            data_nodule_dir=test_nodule_dir, 
-            data_clean_dir=test_clean_dir, 
-            transform=self.hparams.transform_val,
-            data_type=self.hparams.data_type
-        )
-        
-        return data_train, data_val, data_test
+        if self.hparams.nodule_clean_divide:
+            # Transform Train
+            data_train = LIDC_IDRI_3D_Dataset(
+                data_nodule_dir=train_nodule_dir, 
+                data_clean_dir=train_clean_dir, 
+                transform=self.hparams.transform_train,
+                data_type=self.hparams.data_type,
+                nodule_clean_divide=self.hparams.nodule_clean_divide
+            )
+            # Transform Val
+            data_val = LIDC_IDRI_3D_Dataset(
+                data_nodule_dir=val_nodule_dir, 
+                data_clean_dir=val_clean_dir, 
+                transform=self.hparams.transform_val,
+                data_type=self.hparams.data_type,
+                nodule_clean_divide=self.hparams.nodule_clean_divide
+            )
+            data_test = LIDC_IDRI_3D_Dataset(
+                data_nodule_dir=test_nodule_dir, 
+                data_clean_dir=test_clean_dir, 
+                transform=self.hparams.transform_val,
+                data_type=self.hparams.data_type,
+                nodule_clean_divide=self.hparams.nodule_clean_divide
+            )
+            
+            return data_train, data_val, data_test
+        else:
+            # Transform train
+            data_train = LIDC_IDRI_3D_Dataset(
+                data_nodule_dir=train_lung_dir, 
+                data_clean_dir=[], 
+                transform=self.hparams.transform_train,
+                data_type=self.hparams.data_type,
+                nodule_clean_divide=self.hparams.nodule_clean_divide
+            )
+            # Transform Val
+            data_val = LIDC_IDRI_3D_Dataset(
+                data_nodule_dir=val_lung_dir, 
+                data_clean_dir=[], 
+                transform=self.hparams.transform_val,
+                data_type=self.hparams.data_type,
+                nodule_clean_divide=self.hparams.nodule_clean_divide
+            )
+            data_test = LIDC_IDRI_3D_Dataset(
+                data_nodule_dir=test_lung_dir, 
+                data_clean_dir=[], 
+                transform=self.hparams.transform_val,
+                data_type=self.hparams.data_type,
+                nodule_clean_divide=self.hparams.nodule_clean_divide
+            )
+            
+            return data_train, data_val, data_test
             
     
     def _split_data(self, file_paths, train_val_test_split) -> Tuple[list, list, list]:

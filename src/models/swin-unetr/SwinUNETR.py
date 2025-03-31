@@ -1141,3 +1141,21 @@ def filter_swinunetr(key, value):
         return new_key, value
     else:
         return None
+
+if __name__ == "__main__":
+    import torch 
+    input = torch.randint(
+        low=0,
+        high=255,
+        size=(1, 1, 64, 192, 192),
+        dtype=torch.float,
+    )
+    model = SwinUNETR(
+        in_channels=1,
+        out_channels=1,
+        img_size=[64, 192, 192]
+    )
+    
+    output = model(input)
+    print(output)
+    print(output.shape) # torch.Size([batch, num_classes, 128, 128, 128])

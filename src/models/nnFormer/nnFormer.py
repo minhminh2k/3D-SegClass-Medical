@@ -1101,15 +1101,15 @@ if __name__ == "__main__":
     input = torch.randint(
         low=0,
         high=255,
-        size=(2, 1, 128, 128, 128),
+        size=(1, 1, 64, 192, 192),
         dtype=torch.float,
     )
     model = nnFormer(
         input_channels=1,
         num_classes=1,
-        crop_size=[128, 128, 128],
+        crop_size=[64, 192, 192],
         patch_size=[2, 4, 4],
-        window_size=[8, 8, 6, 4],
+        # window_size=[8, 8, 6, 4],
         deep_supervision=False
     )
     

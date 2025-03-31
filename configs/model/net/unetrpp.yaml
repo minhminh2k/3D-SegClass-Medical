@@ -14,4 +14,4 @@ norm_name: "instance"
 dropout_rate: 0.0
 depths: [3, 3, 3, 3]
 dims: [32, 64, 128, 256]
-do_ds: False
+do_ds: ${model.do_ds}

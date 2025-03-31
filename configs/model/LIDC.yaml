@@ -1,6 +1,6 @@
-_target_: src.models.SwinUNETR_LIDC_module.SwinUNETR_LIDC_Module
+_target_: src.models.LIDC_module.LIDC_Module
 defaults:
-  - criterion: dice_ce_loss_monai.yaml
+  - criterion: dice_focal_loss_monai.yaml
   - net: unetrpp.yaml
   - scheduler: reducelr_on_plateau.yaml
 
@@ -13,13 +13,20 @@ dice_loss:
   to_onehot_y: False
   sigmoid: True
   softmax: False
-  include_background: False
+  include_background: True
+
+focal_loss:
+  _target_: monai.losses.FocalLoss
+  to_onehot_y: False
+  include_background: True
 
 optimizer:
   _target_: torch.optim.AdamW
   _partial_: true
-  lr: 0.00001
-  weight_decay: 0.000001
+  lr: 0.001
+  weight_decay: 0.0001
+
+do_ds: False
 
 # scheduler:
 #   _target_: torch.optim.lr_scheduler.CosineAnnealingLR

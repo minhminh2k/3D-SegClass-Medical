@@ -6,4 +6,4 @@ ckpt: "/data/hpc/dqm/3D-SegClass-Medical/checkpoints/medsam/medsam_vit_b.pth"
 # ckpt: "/data/hpc/dqm/3D-SegClass-Medical/checkpoints/sam/sam_vit_b_01ec64.pth"
 vit_name: 'vit_b'
 num_modalities: 1
-do_ds: False
+do_ds: ${model.do_ds}

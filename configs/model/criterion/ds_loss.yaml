@@ -1,0 +1,16 @@
+_target_: monai.losses.DeepSupervisionLoss
+
+loss:
+  _target_: monai.losses.DiceFocalLoss
+  include_background: True
+  sigmoid: True
+  softmax: False
+  squared_pred: True
+  jaccard: false
+  smooth_nr: 0.00001
+  smooth_dr: 0.00001
+  lambda_dice: 1.0
+  lambda_focal: 1.0
+
+weight_mode: "exp"
+weights: None

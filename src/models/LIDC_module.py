@@ -19,7 +19,7 @@ logging.basicConfig(
     datefmt="%Y-%m-%d %H:%M:%S"
 )
 
-class SwinUNETR_LIDC_Module(LightningModule):
+class LIDC_Module(LightningModule):
     """Example of a `LightningModule` for LIDC 3D.
 
     A `LightningModule` implements 8 key methods:
@@ -60,11 +60,13 @@ class SwinUNETR_LIDC_Module(LightningModule):
         criterion: torch.nn.Module,
         dice_loss: torch.nn.Module,
         ce_loss: torch.nn.Module,
+        focal_loss: torch.nn.Module,
         compile: bool,
         roi_size: Tuple[int, int, int] = [128, 128, 128],
         sw_batch_size: int = 4,
         infer_overlap: float = 0.5,
         num_classes: int = 2,
+        do_ds: bool = False,
     ) -> None:
         """Initialize a `MNISTLitModule`.
 
@@ -84,6 +86,7 @@ class SwinUNETR_LIDC_Module(LightningModule):
         self.criterion = criterion
         self.ce_loss = ce_loss
         self.dice_loss = dice_loss
+        self.focal_loss = focal_loss
         
         # Post processing each class
         self.post_sigmoid = Activations(sigmoid=True)
@@ -110,6 +113,10 @@ class SwinUNETR_LIDC_Module(LightningModule):
         self.train_dice_loss = MeanMetric()
         self.val_dice_loss = MeanMetric()
         self.test_dice_loss = MeanMetric()
+        
+        self.train_focal_loss = MeanMetric()
+        self.val_focal_loss = MeanMetric()
+        self.test_focal_loss = MeanMetric()
 
         # for tracking best so far validation accuracy
         self.val_dice_best = MaxMetric()
@@ -133,6 +140,7 @@ class SwinUNETR_LIDC_Module(LightningModule):
         self.val_loss.reset()
         self.val_ce_loss.reset()
         self.val_dice_loss.reset()
+        self.val_focal_loss.reset()
         self.val_dice.reset()
         self.val_jaccard.reset()
         self.val_dice_best.reset()
@@ -160,8 +168,9 @@ class SwinUNETR_LIDC_Module(LightningModule):
         loss = self.criterion(logits, target)
         ce_loss = self.ce_loss(logits, target)
         dice_loss = self.dice_loss(logits, target)
+        focal_loss = self.focal_loss(logits, target)
                 
-        return loss, ce_loss, dice_loss, logits, target
+        return loss, ce_loss, dice_loss, focal_loss, logits, target
 
     def training_step(
         self, batch: Tuple[torch.Tensor, torch.Tensor], batch_idx: int
@@ -173,7 +182,7 @@ class SwinUNETR_LIDC_Module(LightningModule):
         :param batch_idx: The index of the current batch.
         :return: A tensor of losses between model predictions and targets.
         """
-        loss, ce_loss, dice_loss, pred_masks, gt_masks = self.model_step(batch)
+        loss, ce_loss, dice_loss, focal_loss, pred_masks, gt_masks = self.model_step(batch)
             
         labels_list = decollate_batch(gt_masks)
         outputs_list = decollate_batch(pred_masks)
@@ -183,15 +192,15 @@ class SwinUNETR_LIDC_Module(LightningModule):
         self.train_loss(loss)
         self.train_ce_loss(ce_loss)
         self.train_dice_loss(dice_loss)
+        self.train_focal_loss(focal_loss)
         
         _ = self.train_dice(y_pred=outputs_convert, y=labels_list)
         _ = self.train_jaccard(y_pred=outputs_convert, y=labels_list)
-        
-        # logging.info(f"Training Step: {train_dice}") # Ex: tensor([[0.6667]], device='cuda:0')
-        
+                
         self.log("train/loss", self.train_loss, on_step=False, on_epoch=True, prog_bar=True)
         self.log("train/ce_loss", self.train_ce_loss, on_step=False, on_epoch=True, prog_bar=True)
         self.log("train/dice_loss", self.train_dice_loss, on_step=False, on_epoch=True, prog_bar=True)
+        self.log("train/focal_loss", self.train_focal_loss, on_step=False, on_epoch=True, prog_bar=True)
 
         # return loss or backpropagation will fail
         return loss
@@ -214,7 +223,7 @@ class SwinUNETR_LIDC_Module(LightningModule):
             labels.
         :param batch_idx: The index of the current batch.
         """
-        loss, ce_loss, dice_loss, pred_masks, labels = self.model_step(batch)
+        loss, ce_loss, dice_loss, focal_loss, pred_masks, labels = self.model_step(batch)
         
         labels_list = decollate_batch(labels)
         outputs_list = decollate_batch(pred_masks)
@@ -225,6 +234,7 @@ class SwinUNETR_LIDC_Module(LightningModule):
         self.val_loss(loss)
         self.val_ce_loss(ce_loss)
         self.val_dice_loss(dice_loss)
+        self.val_focal_loss(focal_loss)
         
         _ = self.val_dice(y_pred=outputs_convert, y=labels_list)
         _ = self.val_jaccard(y_pred=outputs_convert, y=labels_list)
@@ -232,6 +242,7 @@ class SwinUNETR_LIDC_Module(LightningModule):
         self.log("val/loss", self.val_loss, on_step=False, on_epoch=True, prog_bar=True)
         self.log("val/ce_loss", self.val_ce_loss, on_step=False, on_epoch=True, prog_bar=True)
         self.log("val/dice_loss", self.val_dice_loss, on_step=False, on_epoch=True, prog_bar=True)
+        self.log("val/focal_loss", self.val_focal_loss, on_step=False, on_epoch=True, prog_bar=True)
         
         return {"loss": loss, "preds": pred_masks, "targets": labels}
         
@@ -258,7 +269,7 @@ class SwinUNETR_LIDC_Module(LightningModule):
             labels.
         :param batch_idx: The index of the current batch.
         """
-        loss, ce_loss, dice_loss, pred_masks, labels = self.model_step(batch)
+        loss, ce_loss, dice_loss, focal_loss, pred_masks, labels = self.model_step(batch)
                 
         labels_list = decollate_batch(labels)
         outputs_list = decollate_batch(pred_masks)
@@ -268,6 +279,7 @@ class SwinUNETR_LIDC_Module(LightningModule):
         self.test_loss(loss)
         self.test_ce_loss(ce_loss)
         self.test_dice_loss(dice_loss)
+        self.test_focal_loss(focal_loss)
         
         _ = self.test_dice(y_pred=outputs_convert, y=labels_list)
         _ = self.test_jaccard(y_pred=outputs_convert, y=labels_list)
@@ -275,6 +287,7 @@ class SwinUNETR_LIDC_Module(LightningModule):
         self.log("test/loss", self.test_loss, on_step=False, on_epoch=True, prog_bar=True)
         self.log("test/ce_loss", self.test_ce_loss, on_step=False, on_epoch=True, prog_bar=True)
         self.log("test/dice_loss", self.test_dice_loss, on_step=False, on_epoch=True, prog_bar=True)
+        self.log("test/focal_loss", self.test_focal_loss, on_step=False, on_epoch=True, prog_bar=True)
         
         return {"loss": loss, "preds": pred_masks, "targets": labels}
         
