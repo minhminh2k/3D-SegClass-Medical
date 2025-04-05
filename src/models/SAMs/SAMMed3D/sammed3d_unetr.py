@@ -8,9 +8,9 @@ from monai.utils import ensure_tuple_rep
 import torch.nn.functional as F
 import torch
 from functools import partial
-from src.models.SAMs.SAM-Med3D.modeling.image_encoder3D import ImageEncoderViT3D
+from src.models.SAMs.SAMMed3D.modeling.image_encoder3D import ImageEncoderViT3D
 
-class SAM_Med3D_UNETR(nn.Module):
+class SAMMed3D_UNETR(nn.Module):
     def __init__(
         self,
         img_size: Union[Sequence[int], int],
@@ -26,11 +26,10 @@ class SAM_Med3D_UNETR(nn.Module):
         encoder_global_attn_indexes: tuple =[2, 5, 8, 11],
         vit_patch_size: int = 16,
         encoder_out_channels: int = 384,
-        pretrained=True,
-        trainable_encoder=True,
+        pretrained: bool = True,
+        trainable_encoder: bool = True,
         res_block: bool = True,
         conv_block: bool = True
-        
     ) -> None:
 
         super().__init__()
@@ -46,7 +45,7 @@ class SAM_Med3D_UNETR(nn.Module):
             raise ValueError("embed_dim should be divisible by feature_size.")
         
         # Image Encoder using Vision Transformer (ViT)
-        self.image_encoder_vit=ImageEncoderViT3D(
+        self.image_encoder_vit = ImageEncoderViT3D(
                     depth=encoder_depth,
                     embed_dim=embed_dim,
                     img_size=img_size[0],
@@ -63,7 +62,7 @@ class SAM_Med3D_UNETR(nn.Module):
         )
         
         if pretrained:
-            image_encoder_model_state=torch.load(image_encoder_ckpt)
+            image_encoder_model_state=torch.load(image_encoder_ckpt, weights_only = False)
             self.image_encoder_vit.load_state_dict(state_dict=image_encoder_model_state)
             
             if not trainable_encoder:

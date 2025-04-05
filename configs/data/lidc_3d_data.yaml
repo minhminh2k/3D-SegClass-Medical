@@ -5,30 +5,29 @@ defaults:
   - transform_val: lidc_3d.yaml
 
 data_nodule_dir: "/data/hpc/dqm/3D-SegClass-Medical/data/Image"
-data_lung_dir: "/data/hpc/dqm/3D-SegClass-Medical/data/Lung_Segmentation_v2"
 data_clean_dir: "/data/hpc/dqm/3D-SegClass-Medical/data/Clean/Image"
+data_lung_dir: "/home/duong.quang.minh/project/3D-SegClass-Medical/data/Lung_Segmentation_v2"
 
 train_val_test_split: [80, 10, 10]
-image_size: [128, 128, 128] # [64, 192, 192]
-image_size_before_resized: [128, 256, 256] # [64, 256, 256]
+image_size_before_resized: [64, 256, 256] # 64, 256, 256
+image_size: [64, 192, 192] # 64, 224, 224
+samples: 2
+batch_size: 2
+# SAM3D: batch 3 sample 1 
+# SwinUNETR: batch 1 sample 1 x 128 -> 14 Gb
+# UNETR++: batch 4 x 128 -> 14.3 Gb ---- batch 2 samples 2 x 192 -> 18 Gb
+
 
 num_nodule_samples: 2000
 num_lung_samples: 2000
 num_clean_samples: 1000
 
-data_type: "lung" # image
+data_type: "image"
 num_classes: 2
 
 # True -> get from Image
 # False -> get from Lung_Segmentation_v2
-nodule_clean_divide: True
-
-samples: 1
-batch_size: 1
-# SAM3D: batch 3 sample 1 
-# SwinUNETR: batch 1 sample 1 -> 14 Gb
-# UNETR++: batch 4 -> 14.3 Gb
-
+nodule_clean_divide: False
 num_workers: 8
 pin_memory: False
 

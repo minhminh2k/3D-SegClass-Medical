@@ -1,0 +1,19 @@
+_target_: src.models.SAMs.SAMMed3D.sammed3d_unetr.SAMMed3D_UNETR
+
+img_size: ${data.image_size}
+image_encoder_ckpt: '/home/duong.quang.minh/project/3D-SegClass-Medical/checkpoints/sammed3d/sam_med3d_turbo_image_encoder.pth'
+in_channels: 1
+out_channels: 1
+feature_size: 16
+norm_name: "instance"
+spatial_dims: 3
+embed_dim: 768
+encoder_depth: 12
+encoder_num_heads: 12
+encoder_global_attn_indexes: [2, 5, 8, 11]
+vit_patch_size: 16
+encoder_out_channels: 384
+pretrained: True
+trainable_encoder: True
+res_block: True
+conv_block: True

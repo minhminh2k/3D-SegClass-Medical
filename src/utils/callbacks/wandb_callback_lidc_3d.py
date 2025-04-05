@@ -30,16 +30,20 @@ class LIDC_3D_Callback(Callback):
         data_type: Literal["image", 'lung'] = "image",
         n_images_to_log: int = 5,
         roi_size: tuple = [128, 128, 128],
+        image_size_before_resized: tuple = [128, 256, 256],
         num_classes: int = 2,
         classes_name: tuple[str] = ["Lung Nodule"],
         colors: tuple[str] = ["#00FF00", "#FFFF1E"],
         case_names: tuple[str] = [ "0068", "0027", "0050", "0061", "0074", "0101", "0117"],
         number_of_logged_samples: int = 2,
+        do_ds: bool = False
     ):
         self.num_classes = num_classes
         self.roi_size = roi_size
+        self.image_size_before_resized = image_size_before_resized
         self.classes_name = classes_name
         self.colors = colors
+        self.do_ds = do_ds
         
         self.data_nodule_dir = data_nodule_dir
         self.data_clean_dir = data_clean_dir
@@ -78,7 +82,7 @@ class LIDC_3D_Callback(Callback):
         self.transform = Compose(
             [
                 transforms.LoadImaged(keys=["image", "label"], ensure_channel_first=True),
-                transforms.RandSpatialCropd(keys=["image", "label"], roi_size=[128, 256, 256], random_size=False),
+                transforms.RandSpatialCropd(keys=["image", "label"], roi_size=self.image_size_before_resized, random_size=False),
                 transforms.Resized(
                     keys=["image", "label"],
                     spatial_size=self.roi_size,
@@ -127,9 +131,12 @@ class LIDC_3D_Callback(Callback):
             label = transformed["label"] # [1, 128, 128, 128]
             
             image = image.unsqueeze(0).to(trainer.model.device)
-             
-            prob = torch.sigmoid(trainer.model(image)) # [1, 1, 128, 128, 128]
             
+            if not self.do_ds:
+                prob = torch.sigmoid(trainer.model(image)) # [1, 1, 128, 128, 128]
+            else:
+                prob = torch.sigmoid(trainer.model(image)[0])
+                
             seg = prob[0].detach().cpu().numpy() # [1, 128, 128, 128]
 
             seg = (seg > 0.5).astype(np.int8)
@@ -185,10 +192,6 @@ class LIDC_3D_Callback(Callback):
                     pred=seg
                 )
                                     
-                # trainer.logger.log_image(
-                #     key=f"predicted mask (validation)",
-                #     images=[wandb.Video(gif_buffer, format="gif")],
-                # )
                 wandb.log({f"predicted mask (validation)": wandb.Video(gif_buffer, format="gif")})
                 gif_buffer.close()
             
@@ -229,11 +232,6 @@ class LIDC_3D_Callback(Callback):
                     label=label.numpy().astype(np.int8),
                     pred=seg
                 )
-                                    
-                # trainer.logger.log_image(
-                #     key=f"predicted mask (testing)",
-                #     images=[wandb.Video(gif_buffer, format="gif")],
-                # )
                 
                 wandb.log({f"predicted mask (testing)": wandb.Video(gif_buffer, format="gif")})
                 gif_buffer.close()

@@ -6,19 +6,16 @@ wandb_callback:
   data_type: ${data.data_type}
   classes_name: ["Lung Nodule"]
   colors: ["#00FF00", "#FFFF1E", "#FF0000"]
-  n_images_to_log: 1 # train
-  number_of_logged_samples: 1 # validation
+  n_images_to_log: ${data.samples} # train
+  number_of_logged_samples: ${data.samples} # validation
   roi_size: ${data.image_size}
   num_classes: 2
+  do_ds: ${model.do_ds}
   case_names:
     [
-      "0450",
+      "0481",
       "0912",
-      "0493",
-      "0360",
       "0050",
-      "0061",
-      "0013",
       "0624",
       "0462",
       "0001",
@@ -26,7 +23,20 @@ wandb_callback:
       "0565",
       "0423",
       "0003",
-      "0139"
+      "0139",
+      "0485",
+      "0045",
+      "0563",
+      "0061",
+      "0404",
+      "0415",
+      "0815",
+      "0854",
+      "0858",
+      "0942",
+      "0978",
+      "0998",
+      "0834"
     ]
   
   

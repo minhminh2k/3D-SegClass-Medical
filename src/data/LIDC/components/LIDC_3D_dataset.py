@@ -7,6 +7,7 @@ import numpy as np
 from typing import Sequence, Callable, Any, Literal
 from torch.utils.data import Dataset, Subset
 from monai.transforms import Compose
+from monai import transforms 
 
 logging.basicConfig(
     level=logging.INFO,
@@ -22,6 +23,9 @@ class LIDC_IDRI_3D_Dataset(Dataset):
         transform: Callable | None = None,
         data_type: Literal["image", "lung"] = "image",
         nodule_clean_divide: bool = True,
+        image_size_before_resized: tuple = (64, 256, 256),
+        image_size: tuple = (64, 192, 192),
+        samples: int = 2,
     ) -> None:
         """
         Args:
@@ -33,6 +37,10 @@ class LIDC_IDRI_3D_Dataset(Dataset):
         self.data_clean_dir = data_clean_dir
         self.data_type = data_type
         self.nodule_clean_divide = nodule_clean_divide
+        self.image_size_before_resized = image_size_before_resized
+        self.image_size = image_size
+        self.samples = samples
+        
         self.data_list = self._get_file_list()
         logging.info(f"Length of the LIDC dataset: {len(self.data_list)}")
         
@@ -149,8 +157,28 @@ class LIDC_IDRI_3D_Dataset(Dataset):
         """
         data_i = self.data_list[index]
         # return apply_transform(self.transform, data_i) if self.transform is not None else data_i
-        return self.transform(data_i)
-    
+        try:
+            return self.transform(data_i)
+        except:
+            self.transform =  Compose(
+                [
+                    transforms.LoadImaged(keys=["image", "label"], ensure_channel_first=True),
+                    transforms.RandSpatialCropSamplesd(
+                        keys=["image", "label"],
+                        roi_size=self.image_size_before_resized,
+                        num_samples=self.samples,
+                        random_center=True,
+                        random_size=False
+                    ),
+                    transforms.Resized(
+                        keys=["image", "label"],
+                        spatial_size=self.image_size,
+                        mode=("trilinear", "nearest"),  # Image: trilinear, Label: nearest-neighbor
+                    ),
+                    transforms.ToTensord(keys=["image", "label"])
+                ]
+            )
+            return self.transform(data_i)
 
     def __getitem__(self, index: int | slice | Sequence[int]):
         """

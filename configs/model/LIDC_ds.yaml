@@ -2,7 +2,7 @@ _target_: src.models.LIDC_module_ds.LIDC_Module_DS
 defaults:
   - criterion: ds_loss.yaml
   - net: unetrpp.yaml
-  - scheduler: reducelr_on_plateau.yaml
+  - scheduler: warmup_cosine.yaml
 
 ds_ce_loss: 
   _target_: monai.losses.DeepSupervisionLoss
@@ -24,8 +24,6 @@ ds_focal_loss:
   loss: 
     _target_: monai.losses.FocalLoss
     to_onehot_y: False
-    sigmoid: True
-    softmax: False
     include_background: True
 
 optimizer:

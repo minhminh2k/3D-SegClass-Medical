@@ -16,12 +16,12 @@ matplotlib==3.10.0
 scikit-learn==1.6.0
 scikit-image==0.25.0
 Pillow==11.0.0
-opencv-python==4.10.0.48
 albumentations==1.4.24
 imageio==2.36.1
 scipy==1.14.1
 ipykernel==6.29.5
 einops==0.8.0
+opencv-python
 
 # --------- loggers --------- #
 wandb
@@ -56,6 +56,9 @@ gdown==5.2.0
 pydicom==3.0.1
 pylidc==0.2.1
 sqlalchemy==2.0.36
+
+# Kaggle
+kaggle
 
 # SAM
 git+https://github.com/facebookresearch/segment-anything.git

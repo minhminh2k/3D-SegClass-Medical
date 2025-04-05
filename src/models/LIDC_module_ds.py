@@ -11,6 +11,7 @@ from monai.transforms import (
 from monai.data import decollate_batch
 from monai.metrics import DiceMetric, MeanIoU
 from monai.utils.enums import MetricReduction
+from monai.losses import DeepSupervisionLoss
 
 logging.basicConfig(
     level=logging.INFO,
