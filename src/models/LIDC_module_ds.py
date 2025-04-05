@@ -3,7 +3,7 @@ from typing import Any, Dict, Tuple, List
 import torch
 import logging
 from lightning import LightningModule
-from torchmetrics import MaxMetric, MeanMetric
+from torchmetrics import MaxMetric, MeanMetric, MinMetric
 from monai.transforms import (
     AsDiscrete,
     Activations,
@@ -12,6 +12,7 @@ from monai.data import decollate_batch
 from monai.metrics import DiceMetric, MeanIoU
 from monai.utils.enums import MetricReduction
 from monai.losses import DeepSupervisionLoss
+from monai.metrics import HausdorffDistanceMetric
 
 logging.basicConfig(
     level=logging.INFO,
@@ -101,6 +102,10 @@ class LIDC_Module_DS(LightningModule):
         self.val_jaccard = MeanIoU(include_background=False, reduction=MetricReduction.MEAN)
         self.test_jaccard = MeanIoU(include_background=False, reduction=MetricReduction.MEAN)
         
+        self.train_hd = HausdorffDistanceMetric(include_background=True, reduction=MetricReduction.MEAN, percentile=95)
+        self.val_hd = HausdorffDistanceMetric(include_background=True, reduction=MetricReduction.MEAN, percentile=95)
+        self.test_hd = HausdorffDistanceMetric(include_background=True, reduction=MetricReduction.MEAN, percentile=95)
+        
         # for averaging loss across batches
         self.train_loss = MeanMetric()
         self.val_loss = MeanMetric()
@@ -121,8 +126,11 @@ class LIDC_Module_DS(LightningModule):
         # for tracking best so far validation accuracy
         self.val_dice_best = MaxMetric()
         self.val_jaccard_best = MaxMetric()
+        self.val_hd_best = MinMetric()
+        
         self.test_dice_best = MaxMetric()
         self.test_jaccard_best = MaxMetric()
+        self.test_hd_best = MinMetric()
         
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
@@ -145,6 +153,8 @@ class LIDC_Module_DS(LightningModule):
         self.val_jaccard.reset()
         self.val_dice_best.reset()
         self.val_jaccard_best.reset()
+        self.val_hd.reset()
+        self.val_hd_best.reset()
 
     def model_step(
         self, batch: Any
@@ -212,8 +222,12 @@ class LIDC_Module_DS(LightningModule):
         acc_jaccard = self.train_jaccard.aggregate().item()  # get current val acc        
         self.train_jaccard.reset()
         
+        acc_hd = self.train_hd.aggregate().item()  # get current val acc        
+        self.train_hd.reset()
+        
         self.log("train/dice_epoch", acc_train, sync_dist=True, prog_bar=True)
         self.log("train/jaccard_epoch", acc_jaccard, sync_dist=True, prog_bar=True)
+        self.log("train/hd_epoch", acc_hd, sync_dist=True, prog_bar=True)
 
     def validation_step(self, batch: Tuple[torch.Tensor, torch.Tensor], batch_idx: int) -> None:
         """Perform a single validation step on a batch of data from the validation set.
@@ -237,6 +251,7 @@ class LIDC_Module_DS(LightningModule):
         
         _ = self.val_dice(y_pred=outputs_convert, y=labels_list)
         _ = self.val_jaccard(y_pred=outputs_convert, y=labels_list)
+        _ = self.val_hd(y_pred=outputs_convert, y=labels_list)
                 
         self.log("val/loss", self.val_loss, on_step=False, on_epoch=True, prog_bar=True)
         self.log("val/ce_loss", self.val_ce_loss, on_step=False, on_epoch=True, prog_bar=True)
@@ -255,10 +270,15 @@ class LIDC_Module_DS(LightningModule):
         self.val_jaccard.reset()
         self.val_jaccard_best(acc_jaccard)  # update best so far val acc
 
+        acc_hd = self.val_hd.aggregate().item()  # get current val acc    
+        self.val_hd.reset()
+        self.val_hd_best(acc_hd)  # update best so far val acc
+        
         # log `val_acc_best` as a value through `.compute()` method, instead of as a metric object
         # otherwise metric would be reset by lightning after each epoch
         self.log("val/dice_best", self.val_dice_best.compute(), sync_dist=True, prog_bar=True)
         self.log("val/jaccard_best", self.val_jaccard_best.compute(), sync_dist=True, prog_bar=True)
+        self.log("val/hd_best", self.val_hd_best.compute(), sync_dist=True, prog_bar=True)
         
 
     def test_step(self, batch: Tuple[torch.Tensor, torch.Tensor], batch_idx: int) -> None:
@@ -282,6 +302,7 @@ class LIDC_Module_DS(LightningModule):
         
         _ = self.test_dice(y_pred=outputs_convert, y=labels_list)
         _ = self.test_jaccard(y_pred=outputs_convert, y=labels_list)
+        _ = self.test_hd(y_pred=outputs_convert, y=labels_list) 
         
         self.log("test/loss", self.test_loss, on_step=False, on_epoch=True, prog_bar=True)
         self.log("test/ce_loss", self.test_ce_loss, on_step=False, on_epoch=True, prog_bar=True)
@@ -300,8 +321,13 @@ class LIDC_Module_DS(LightningModule):
         self.test_jaccard.reset()
         self.test_jaccard_best(acc_jaccard)
         
+        acc_hd = self.test_hd.aggregate().item()  # get current val acc
+        self.test_hd.reset()
+        self.test_hd_best(acc_hd)
+        
         self.log("test/dice", self.test_dice_best.compute(), sync_dist=True, prog_bar=True)
         self.log("test/jaccard", self.test_jaccard_best.compute(), sync_dist=True, prog_bar=True)
+        self.log("test/hd", self.test_hd_best.compute(), sync_dist=True, prog_bar=True)
         
 
     def setup(self, stage: str) -> None:
