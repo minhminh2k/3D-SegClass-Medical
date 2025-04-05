@@ -1,0 +1,38 @@
+_target_: src.models.LIDC_module.LIDC_Module
+defaults:
+  - criterion: dice_focal_loss_monai.yaml
+  - net: sam3d.yaml
+  - scheduler: warmup_cosine_sam.yaml
+
+ce_loss: 
+  _target_: src.models.losses.CE_loss.CELossMonAI
+  reduction: mean
+
+dice_loss: 
+  _target_: src.models.losses.dice_loss_monai.DiceLossMonAI
+  to_onehot_y: False
+  sigmoid: True
+  softmax: False
+  include_background: True
+
+focal_loss:
+  _target_: monai.losses.FocalLoss
+  to_onehot_y: False
+  include_background: True
+
+optimizer:
+  _target_: torch.optim.AdamW
+  _partial_: true
+  lr: 0.00008
+  weight_decay: 0.000001
+
+do_ds: False
+
+# scheduler:
+#   _target_: torch.optim.lr_scheduler.CosineAnnealingLR
+#   _partial_: true
+#   T_max: ${trainer.max_epochs}
+  
+# compile model for faster training with pytorch 2.0
+compile: false
+num_classes: 2 # including background
