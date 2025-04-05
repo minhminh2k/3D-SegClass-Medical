@@ -23,8 +23,8 @@ class LIDC_IDRI_3D_Dataset(Dataset):
         transform: Callable | None = None,
         data_type: Literal["image", "lung"] = "image",
         nodule_clean_divide: bool = True,
-        image_size_before_resized: tuple = (64, 256, 256),
-        image_size: tuple = (64, 192, 192),
+        image_size_before_resized: tuple = (128, 256, 256),
+        image_size: tuple = (128, 128, 128),
         samples: int = 2,
     ) -> None:
         """

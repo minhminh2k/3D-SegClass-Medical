@@ -181,9 +181,9 @@ class LIDC_IDRI_3D_Datamodule(LightningDataModule):
                 transform=self.hparams.transform_train,
                 data_type=self.hparams.data_type,
                 nodule_clean_divide=self.hparams.nodule_clean_divide,
-                image_size_before_resized=self.hparams.image_size_before_resized,
-                image_size=self.hparams.image_size,
-                samples=self.hparams.samples,
+                # image_size_before_resized=self.hparams.image_size_before_resized,
+                # image_size=self.hparams.image_size,
+                # samples=self.hparams.samples,
             )
             # Transform Val
             data_val = LIDC_IDRI_3D_Dataset(
@@ -192,9 +192,9 @@ class LIDC_IDRI_3D_Datamodule(LightningDataModule):
                 transform=self.hparams.transform_val,
                 data_type=self.hparams.data_type,
                 nodule_clean_divide=self.hparams.nodule_clean_divide,
-                image_size_before_resized=self.hparams.image_size_before_resized,
-                image_size=self.hparams.image_size,
-                samples=self.hparams.samples,
+                # image_size_before_resized=self.hparams.image_size_before_resized,
+                # image_size=self.hparams.image_size,
+                # samples=self.hparams.samples,
             )
             data_test = LIDC_IDRI_3D_Dataset(
                 data_nodule_dir=test_nodule_dir, 
@@ -202,9 +202,9 @@ class LIDC_IDRI_3D_Datamodule(LightningDataModule):
                 transform=self.hparams.transform_val,
                 data_type=self.hparams.data_type,
                 nodule_clean_divide=self.hparams.nodule_clean_divide,
-                image_size_before_resized=self.hparams.image_size_before_resized,
-                image_size=self.hparams.image_size,
-                samples=self.hparams.samples,
+                # image_size_before_resized=self.hparams.image_size_before_resized,
+                # image_size=self.hparams.image_size,
+                # samples=self.hparams.samples,
             )
             
             return data_train, data_val, data_test

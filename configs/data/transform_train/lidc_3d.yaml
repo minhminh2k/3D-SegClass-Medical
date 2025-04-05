@@ -6,9 +6,9 @@ transforms:
     ensure_channel_first: True
 
   # For image 
-  - _target_: monai.transforms.MedianSmoothd
-    keys: ["image"]
-    radius: 1
+  # - _target_: monai.transforms.MedianSmoothd
+  #   keys: ["image"]
+  #   radius: 1
 
   # - _target_: monai.transforms.RandSpatialCropSamplesd
   #   keys: ["image", "label"]

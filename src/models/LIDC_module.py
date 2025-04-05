@@ -3,7 +3,7 @@ from typing import Any, Dict, Tuple, List
 import torch
 import logging
 from lightning import LightningModule
-from torchmetrics import MaxMetric, MeanMetric
+from torchmetrics import MaxMetric, MeanMetric, MinMetric
 from monai.transforms import (
     AsDiscrete,
     Activations,
@@ -125,11 +125,11 @@ class LIDC_Module(LightningModule):
         # for tracking best so far validation accuracy
         self.val_dice_best = MaxMetric()
         self.val_jaccard_best = MaxMetric()
-        self.val_hd_best = MaxMetric()
+        self.val_hd_best = MinMetric()
         
         self.test_dice_best = MaxMetric()
         self.test_jaccard_best = MaxMetric()
-        self.test_hd_best = MaxMetric()
+        self.test_hd_best = MinMetric()
         
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
