@@ -13,10 +13,11 @@ from segment_anything import sam_model_registry
 from segment_anything import SamPredictor
 from segment_anything import SamAutomaticMaskGenerator
 
-from .components.image_encoder import ImageEncoderViT_3d_v2 as ImageEncoderViT_3d
+# from .components.image_encoder import ImageEncoderViT_3d_v2 as ImageEncoderViT_3d
 from .components.mask_decoder import VIT_MLAHead_h as VIT_MLAHead
 from .components.prompt_encoder import PromptEncoder, TwoWayTransformer
 from monai.inferers import sliding_window_inference
+from .components.image_encoder_tiny import TinyImageEncoderViT_3d as ImageEncoderViT_3d
 
 logging.basicConfig(
     level=logging.INFO,
@@ -431,14 +432,16 @@ def save_checkpoint(state, is_best, checkpoint):
         shutil.copyfile(filepath_last, filepath_best)
 
 if __name__ == "__main__":
+        
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     
     input = torch.rand((1, 3, 128, 128, 128), dtype=torch.float) # .to("cuda")
     print(input.shape)
     model = SAM_3D_Adapter(
-        device=device,
+        device="cpu",
         model_checkpoint = "/data/hpc/dqm/3D-SegClass-Medical/checkpoints/sam/sam_vit_b_01ec64.pth"
     )
     
     _, output = model(input)
     print(output.shape) # torch.Size([batch, num_classes, 128, 128, 128])
+    

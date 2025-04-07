@@ -12,6 +12,8 @@ import torch
 import torch.nn.functional as F
 from torch import nn
 from torch.nn import BCEWithLogitsLoss
+from monai.data import MetaTensor
+
 # from torch.autograd import Function
 
 # --------------------------- HELPER FUNCTIONS ---------------------------
@@ -85,7 +87,11 @@ class LovaszLoss(nn.Module):
         super().__init__()
 
     def forward(self, logit, labels):
-        return lovasz_hinge(logit, labels)
+        if isinstance(logit, MetaTensor):
+            logit_torch = logit.as_tensor()
+        if isinstance(labels, MetaTensor):
+            labels_torch = labels.as_tensor()
+        return lovasz_hinge(logit_torch, labels_torch)
 
 
 class BCE_Lovasz(nn.Module):

@@ -9,9 +9,9 @@ data_clean_dir: "/mnt/nvme1n1/duong.quang.minh/LIDC/Clean/Image"
 data_lung_dir: "/mnt/nvme1n1/duong.quang.minh/LIDC/Lung_Segmentation_v2"
 
 train_val_test_split: [80, 10, 10]
-image_size_before_resized: [128, 256, 256] # 64, 256, 256
-image_size: [128, 128, 128] # 64, 224, 224
-samples: 2
+image_size_before_resized: [64, 256, 256] # 64, 256, 256
+image_size: [64, 256, 256] # 64, 224, 224
+samples: 1
 batch_size: 2
 # SAM3D: batch 3 sample 1 
 # SwinUNETR: batch 1 sample 1 x 128 -> 14 Gb

@@ -5,31 +5,22 @@ transforms:
     keys: ["image", "label"]
     ensure_channel_first: True
 
-  # For image 
-  # - _target_: monai.transforms.MedianSmoothd
-  #   keys: ["image"]
-  #   radius: 1
 
-  # - _target_: monai.transforms.RandSpatialCropSamplesd
-  #   keys: ["image", "label"]
-  #   roi_size: ${data.image_size_before_resized}
-  #   num_samples: ${data.samples}
-  #   random_center: True
-  #   random_size: False
-
-  # - _target_: monai.transforms.RandSpatialCropd
-  #   keys: ["image", "label"]
-  #   roi_size: ${data.image_size_before_resized}
-  #   random_size: False
-
-  - _target_: monai.transforms.RandCropByPosNegLabeld
+  - _target_: monai.transforms.RandSpatialCropSamplesd
     keys: ["image", "label"]
-    label_key: "label"
-    spatial_size: ${data.image_size_before_resized}
-    pos: 2
-    neg: 1
-    num_samples: ${data.samples} # number of cropped samples
-    # image_key: "image"
+    roi_size: ${data.image_size_before_resized}
+    num_samples: ${data.samples}
+    random_center: True
+    random_size: False
+
+  # - _target_: monai.transforms.RandCropByPosNegLabeld
+  #   keys: ["image", "label"]
+  #   label_key: "label"
+  #   spatial_size: ${data.image_size_before_resized}
+  #   pos: 2
+  #   neg: 1
+  #   num_samples: ${data.samples} # number of cropped samples
+  #   # image_key: "image"
 
   - _target_: monai.transforms.RandFlipd
     keys: ["image", "label"]
@@ -64,12 +55,12 @@ transforms:
   - _target_: monai.transforms.RandScaleIntensityd
     keys: "image"
     factors: 0.02
-    prob: 0.4
+    prob: 0.5
 
   - _target_: monai.transforms.RandShiftIntensityd
     keys: "image"
     offsets: 0.02
-    prob: 0.4
+    prob: 0.5
 
   - _target_: monai.transforms.Resized
     keys: ["image", "label"]
