@@ -62,3 +62,5 @@ kaggle
 
 # SAM
 git+https://github.com/facebookresearch/segment-anything.git
+--upgrade git+https://github.com/FabianIsensee/hiddenlayer.git # Need to fix the pytorch builder
+graphviz==0.20.3

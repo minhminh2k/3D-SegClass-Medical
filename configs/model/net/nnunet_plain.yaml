@@ -1,0 +1,13 @@
+_target_: src.models.nnUnet.nnUnet_ResEnc.PlainConvUNet
+
+input_channels: 1 
+num_classes: 1
+n_stages: 6
+features_per_stage: [32, 64, 128, 256, 320, 320]
+kernel_sizes: 3 
+strides: [1, 2, 2, 2, 2, 2]
+n_conv_per_stage: [2, 2, 2, 2, 2, 2]
+num_classes: 1
+n_conv_per_stage_decoder: [2, 2, 2, 2, 2]
+conv_bias: False
+deep_supervision: False
