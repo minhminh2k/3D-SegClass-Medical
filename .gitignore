@@ -153,4 +153,4 @@ checkpoints/*
 # Aim logging
 .aim
 
-/assets/
+# /assets/
