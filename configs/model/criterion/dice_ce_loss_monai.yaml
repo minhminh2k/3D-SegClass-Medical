@@ -1,6 +1,6 @@
 _target_: monai.losses.DiceCELoss
 
-include_background: False
+include_background: True
 sigmoid: True
 softmax: False
 squared_pred: True

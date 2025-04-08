@@ -12,6 +12,7 @@ from monai.data import decollate_batch
 from monai.metrics import DiceMetric, MeanIoU
 from monai.utils.enums import MetricReduction
 from monai.metrics import HausdorffDistanceMetric
+# from monai.losses
 
 logging.basicConfig(
     level=logging.INFO,
@@ -173,7 +174,6 @@ class LIDC_Module(LightningModule):
         # Randscale: 0.0 -> 1.0
                         
         logits = self.forward(image) # [batch, 1, 128, 128, 128]
-        
         loss = self.criterion(logits, target)
         ce_loss = self.ce_loss(logits, target)
         dice_loss = self.dice_loss(logits, target)

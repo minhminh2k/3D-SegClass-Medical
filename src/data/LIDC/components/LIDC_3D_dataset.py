@@ -9,6 +9,12 @@ from torch.utils.data import Dataset, Subset
 from monai.transforms import Compose
 from monai import transforms 
 
+import warnings
+warnings.simplefilter("ignore")
+
+# import monai.transforms.utility.array # fix issue: https://github.com/Project-MONAI/MONAI/pull/8359/files
+# import monai.utils.module # https://github.com/Project-MONAI/MONAI/pull/8347/files
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(levelname)s - %(message)s",
@@ -23,8 +29,8 @@ class LIDC_IDRI_3D_Dataset(Dataset):
         transform: Callable | None = None,
         data_type: Literal["image", "lung"] = "image",
         nodule_clean_divide: bool = True,
-        image_size_before_resized: tuple = (64, 256, 256),
-        image_size: tuple = (64, 256, 256),
+        image_size_before_resized: tuple = (128, 128, 128),
+        image_size: tuple = (128, 128, 128),
         samples: int = 2,
     ) -> None:
         """
@@ -157,10 +163,7 @@ class LIDC_IDRI_3D_Dataset(Dataset):
         """
         data_i = self.data_list[index]
         # return apply_transform(self.transform, data_i) if self.transform is not None else data_i
-        try:
-            return self.transform(data_i)
-        except:
-            self.transform =  Compose(
+        transform_base =  Compose(
                 [
                     transforms.LoadImaged(keys=["image", "label"], ensure_channel_first=True),
                     transforms.RandSpatialCropSamplesd(
@@ -170,16 +173,40 @@ class LIDC_IDRI_3D_Dataset(Dataset):
                         random_center=True,
                         random_size=False
                     ),
-                    transforms.Resized(
-                        keys=["image", "label"],
-                        spatial_size=self.image_size,
-                        mode=("trilinear", "nearest"),  # Image: trilinear, Label: nearest-neighbor
-                    ),
+                    # transforms.Resized(
+                    #     keys=["image", "label"],
+                    #     spatial_size=self.image_size,
+                    #     mode=("trilinear", "nearest"),  # Image: trilinear, Label: nearest-neighbor
+                    # ),
                     transforms.ToTensord(keys=["image", "label"])
                 ]
             )
-            return self.transform(data_i)
+        
+        try:
+            transform_item = self.transform(data_i)
+        except:
+            logging.error("Error when using RandCropByPosNegLabeld -> Using RandSpatialCropSamplesd")
+            transform_item = transform_base(data_i)
 
+        def contains_zero_dim(result):
+            for key in ["image", "label"]:
+                tensor = result.get(key)
+                if isinstance(tensor, torch.Tensor) and tensor.ndim == 0:
+                    return True
+            return False
+        
+        if len(transform_item) == 0:
+            logging.error("Length of the item is 0")
+            return transform_base(data_i)
+        else:
+            for item in transform_item:
+                if contains_zero_dim(item):
+                    logging.error("0-d tensor in transform item.")
+                    return transform_base(data_i)
+        
+        return transform_item
+        
+        
     def __getitem__(self, index: int | slice | Sequence[int]):
         """
         Returns a `Subset` if `index` is a slice or Sequence, a data item otherwise.

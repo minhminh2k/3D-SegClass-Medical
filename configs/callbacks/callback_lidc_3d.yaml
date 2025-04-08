@@ -9,6 +9,7 @@ wandb_callback:
   n_images_to_log: ${data.samples} # train
   number_of_logged_samples: ${data.samples} # validation
   roi_size: ${data.image_size}
+  image_size_before_resized: ${data.image_size_before_resized}
   num_classes: 2
   do_ds: ${model.do_ds}
   case_names:

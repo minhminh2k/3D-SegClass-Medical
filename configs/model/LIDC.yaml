@@ -1,6 +1,6 @@
 _target_: src.models.LIDC_module.LIDC_Module
 defaults:
-  - criterion: lovasz_loss.yaml
+  - criterion: dice_ce_loss_monai.yaml
   - net: unetrpp.yaml
   # - scheduler: warmup_cosine.yaml
 
@@ -9,11 +9,14 @@ ce_loss:
   reduction: mean
 
 dice_loss: 
-  _target_: src.models.losses.dice_loss_monai.DiceLossMonAI
+  _target_: monai.losses.DiceLoss
   to_onehot_y: False
   sigmoid: True
   softmax: False
   include_background: True
+  squared_pred: True
+  smooth_nr: 0.00001
+  smooth_dr: 0.00001
 
 focal_loss:
   _target_: monai.losses.FocalLoss
@@ -23,7 +26,7 @@ focal_loss:
 optimizer:
   _target_: torch.optim.AdamW
   _partial_: true
-  lr: 0.001
+  lr: 0.0001
   weight_decay: 0.00001
 
 do_ds: False

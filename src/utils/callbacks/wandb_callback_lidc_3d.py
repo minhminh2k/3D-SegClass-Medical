@@ -82,12 +82,20 @@ class LIDC_3D_Callback(Callback):
         self.transform = Compose(
             [
                 transforms.LoadImaged(keys=["image", "label"], ensure_channel_first=True),
-                transforms.RandSpatialCropd(keys=["image", "label"], roi_size=self.image_size_before_resized, random_size=False),
-                transforms.Resized(
-                    keys=["image", "label"],
-                    spatial_size=self.roi_size,
-                    mode=("trilinear", "nearest"),  # Image: trilinear, Label: nearest-neighbor
+                transforms.RandCropByPosNegLabeld(
+                    keys=["image", "label"], 
+                    label_key="label",
+                    spatial_size=self.image_size_before_resized,
+                    pos=1,
+                    neg=0,
+                    num_samples=1, # number of cropped samples
+                    image_key="image",
                 ),
+                # transforms.Resized(
+                #     keys=["image", "label"],
+                #     spatial_size=self.roi_size,
+                #     mode=("trilinear", "nearest"),  # Image: trilinear, Label: nearest-neighbor
+                # ),
                 transforms.ToTensord(keys=["image", "label"])
             ]
         )
@@ -124,9 +132,11 @@ class LIDC_3D_Callback(Callback):
         pass
 
     def on_train_epoch_end(self, trainer: "pl.Trainer", pl_module: "pl.LightningModule"):
-
+        # with torch.no_grad():
         for i in range(self.n_images_to_log):
             transformed = self.transform(self.image_dict[i])
+            if isinstance(transformed, list):
+                transformed = transformed[0]
             image = transformed["image"] # [1, 128, 128, 128]
             label = transformed["label"] # [1, 128, 128, 128]
             

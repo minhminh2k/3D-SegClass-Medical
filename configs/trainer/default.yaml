@@ -7,6 +7,8 @@ max_epochs: 250
 accelerator: gpu
 devices: 1
 
+# gradient_clip_val: 0.5 # Avoid exploding gradients
+
 # mixed precision for extra speed-up
 precision: 16 # bf16
 
