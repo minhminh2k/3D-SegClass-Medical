@@ -8,12 +8,13 @@ import logging
 import numpy as np
 import lightning as pl
 from io import BytesIO
-from typing import Literal
+from typing import Literal, Union
 from monai import transforms
 from monai.transforms import Compose
 from PIL import Image
 from lightning.pytorch.callbacks import Callback
 from src.utils.visualization.custom_visualize import gif_visualization
+from torchvision.utils import make_grid
 
 logging.basicConfig(
     level=logging.INFO,
@@ -151,21 +152,19 @@ class LIDC_3D_Callback(Callback):
 
             seg = (seg > 0.5).astype(np.int8)
                         
-            image = image.squeeze(0)            
-            gif_buffer = self.visualization_process(
-                    image=image.squeeze(0), # [128, 128, 128]
-                    label=label.squeeze(0),
-                    pred=seg.squeeze(0)
-                )
-            
+            image = image.squeeze(0)         
             case = self.image_dict[i]["case"]            
-            # trainer.logger.log_image(
-            #     key=f"predicted mask (training) - Case {case}",
-            #     images=[wandb.Video(gif_buffer, format="gif")],
-            # )
-            wandb.log({f"predicted mask (training) - Case {case}": wandb.Video(gif_buffer, format="gif")})
-            
-            gif_buffer.close()
+
+            self.visualization_process(
+                trainer=trainer,
+                image=image.squeeze(0), # [128, 128, 128]
+                label=label.squeeze(0),
+                pred=seg.squeeze(0),
+                case=case,
+                visualize_type="grid",
+                visualization_key="predicted mask (training)"
+            )
+
 
     def on_validation_batch_end(
         self,
@@ -177,17 +176,20 @@ class LIDC_3D_Callback(Callback):
         dataloader_idx: int = 0,
     ) -> None:
         
-        if len(self.n_samples_validation) < self.number_of_logged_samples:
+        if len(self.n_samples_validation) < self.number_of_logged_samples * 20:
             for i, l, o in zip(batch["image"], batch["label"], outputs["preds"]):
                 self.n_samples_validation.append({
                     "image": i.squeeze(0).cpu(),
                     "label": l.squeeze(0).cpu(),
-                    "preds": o.squeeze(0)
+                    "preds": o.detach().squeeze(0)
                 })
             
         self.n_samples_validation = self.n_samples_validation[:self.number_of_logged_samples]
 
     def on_validation_epoch_end(self, trainer: "pl.Trainer", pl_module: "pl.LightningModule"):
+        # Random shuffle
+        random.shuffle(self.n_samples_validation)
+
         with torch.no_grad():
             for batch in self.n_samples_validation:
                 image = batch["image"] # [128, 128, 128]
@@ -196,14 +198,14 @@ class LIDC_3D_Callback(Callback):
                 seg = prob[0].cpu().numpy()
                 seg = (seg > 0.5).astype(np.int8)
                 
-                gif_buffer = self.visualization_process(
+                self.visualization_process(
+                    trainer=trainer,
                     image=image,
                     label=label.numpy().astype(np.int8),
-                    pred=seg
-                )
-                                    
-                wandb.log({f"predicted mask (validation)": wandb.Video(gif_buffer, format="gif")})
-                gif_buffer.close()
+                    pred=seg,
+                    visualize_type="grid",
+                    visualization_key="predicted mask (validation)"
+                )     
             
         self.n_samples_validation.clear()
 
@@ -217,17 +219,20 @@ class LIDC_3D_Callback(Callback):
         dataloader_idx: int = 0,
     ) -> None:
         
-        if len(self.n_samples_test) < self.number_of_logged_samples:
+        if len(self.n_samples_test) < self.number_of_logged_samples * 20:
             for i, l, o in zip(batch["image"], batch["label"], outputs["preds"]):
                 self.n_samples_test.append({
                     "image": i.squeeze(0).cpu(),
                     "label": l.squeeze(0).cpu(),  
-                    "preds": o.squeeze(0)
+                    "preds": o.detach().squeeze(0)
                 })
             
         self.n_samples_test = self.n_samples_test[:self.number_of_logged_samples]
 
     def on_test_epoch_end(self, trainer: "pl.Trainer", pl_module: "pl.LightningModule"):
+        # Random shuffle
+        random.shuffle(self.n_samples_test)
+
         with torch.no_grad():
             for batch in self.n_samples_test:
                 image = batch["image"] # [128, 128, 128]
@@ -237,18 +242,27 @@ class LIDC_3D_Callback(Callback):
                 seg = prob[0].cpu().numpy()
                 seg = (seg > 0.5).astype(np.int8)
                 
-                gif_buffer = self.visualization_process(
+                self.visualization_process(
+                    trainer=trainer,
                     image=image,
                     label=label.numpy().astype(np.int8),
-                    pred=seg
+                    pred=seg,
+                    visualize_type="grid",
+                    visualization_key="predicted mask (testing)"
                 )
-                
-                wandb.log({f"predicted mask (testing)": wandb.Video(gif_buffer, format="gif")})
-                gif_buffer.close()
             
         self.n_samples_test.clear()
         
-    def visualization_process(self, image, label, pred):
+    def visualization_process(
+        self, 
+        trainer,
+        image, 
+        label, 
+        pred, 
+        case: str = '', 
+        visualize_type: Literal["gif", "grid"] = "grid",
+        visualization_key: str = "Predict"
+    ):
         volume_label = gif_visualization(
             image=image,
             label=label,
@@ -264,7 +278,49 @@ class LIDC_3D_Callback(Callback):
             colors=["#FFFF1E", "#00FF00", "#FF0000"],
             transparency=0.4,
         )
+
+        # Visualize with GIF
+        if visualize_type == "gif":
+            self._visualize_with_gif(volume_label=volume_label, volume_pred=volume_pred, case=case)
+        else:
+            first_idx, last_idx = self._find_first_last(volume_label)
+            indices_to_show = self._choosing_slice(first_idx=first_idx, last_idx=last_idx)
+
+            label_tensor = self._slices_to_tensor(slice_list=volume_label, indices=indices_to_show)
+            pred_tensor = self._slices_to_tensor(slice_list=volume_pred, indices=indices_to_show)
+
+            label_grid = make_grid(label_tensor, nrow=4, padding=2)
+            pred_grid = make_grid(pred_tensor, nrow=4, padding=2)
+
+            grid_label_np = label_grid.numpy().transpose(1, 2, 0)
+            grid_predict_np = pred_grid.numpy().transpose(1, 2, 0)
+
+            grid_label_np = Image.fromarray(grid_label_np)
+            grid_predict_np = Image.fromarray(grid_predict_np)
+
+            if case:
+                logger_key = visualization_key + " - " + f"Case {str(case)}"
+                label_caption = f"Label - {case}"
+                pred_caption = f"Predict - {case}"
+            else:
+                logger_key = visualization_key
+                label_caption = f"Label"
+                pred_caption = f"Predict"
+
+            wandb_logger = trainer.logger
+            wandb_logger.log_image(
+                key=logger_key, 
+                images=[grid_label_np, grid_predict_np],
+                caption=[label_caption, pred_caption]
+            )
     
+    def _visualize_with_gif(
+        self,
+        volume_label: list[np.ndarray],
+        volume_pred: list[np.ndarray],
+        case: str,
+        visualization_key: str
+    ):
         # Stack frames
         frames = []
         for i in range(len(volume_label)): # first axis
@@ -280,5 +336,52 @@ class LIDC_3D_Callback(Callback):
         gif_buffer = BytesIO()
         frames[0].save(gif_buffer, format="GIF", save_all=True, append_images=frames[1:], duration=100, loop=0)
         gif_buffer.seek(0)
+
+        if case:
+            logger_key = visualization_key + " - " + f"Case {case}"
+        else:
+            logger_key = visualization_key
         
-        return gif_buffer
+        wandb.log({logger_key: wandb.Video(gif_buffer, format="gif")})
+            
+        gif_buffer.close()
+    
+    def _find_first_last(self, slices: list[np.ndarray]) -> Union[int, None]:
+        first = None
+        last = None
+        for idx, arr in enumerate(slices):
+            if np.any(arr == 1):
+                if first is None:
+                    first = idx
+                last = idx
+        if first is None or last is None:
+            first, last = 0, len(slices) - 1
+        return first, last
+    
+    def _choosing_slice(
+        self, 
+        num_grid: int = 9, 
+        first_idx: int = 0, 
+        last_idx: int = 127
+    ) -> list[int]:
+        if last_idx - first_idx < num_grid - 1:
+            indices_to_show = list(range(first_idx, last_idx + 1))
+            while len(indices_to_show) < num_grid:
+                indices_to_show.append(last_idx)
+        else:
+            indices_to_show = np.linspace(first_idx, last_idx, num_grid)
+            indices_to_show = np.around(indices_to_show).astype(int).tolist()
+
+        return indices_to_show
+    
+    def _slices_to_tensor(
+        self,
+        slice_list: list[int], 
+        indices: list[int]
+    ) -> torch.Tensor:
+        tensor_list = []
+        for i in indices:
+            t = torch.from_numpy(slice_list[i])
+            t = t.unsqueeze(0)
+            tensor_list.append(t)
+        return torch.stack(tensor_list)

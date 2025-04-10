@@ -192,24 +192,27 @@ class ResidualUNet(nn.Module):
 if __name__ == '__main__':
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     
-    data = torch.rand((1, 2, 1, 128, 128, 128)).to(device)
+    data = torch.rand((1, 1, 128, 128, 128)).to(device)
     
     # Parameters: 102321317 -> batch 2 -> 20 - 21 Gb VRAM
     # Deep Supervision -> len 5
-    net = ResidualEncoderUNet(input_channels=1, n_stages=6, features_per_stage=(32, 64, 128, 256, 320, 320),
-                              conv_op=nn.Conv3d, kernel_sizes=3, strides=(1, 2, 2, 2, 2, 2),
-                              n_blocks_per_stage=(1, 3, 4, 6, 6, 6), num_classes=1,
-                              n_conv_per_stage_decoder=(1, 1, 1, 1, 1),
-                              conv_bias=True, norm_op=nn.InstanceNorm3d, norm_op_kwargs={}, dropout_op=None,
-                              nonlin=nn.LeakyReLU, nonlin_kwargs={'inplace': True}, deep_supervision=True).to(device)
+    # net = ResidualEncoderUNet(input_channels=1, n_stages=6, features_per_stage=(32, 64, 128, 256, 320, 320),
+    #                           conv_op=nn.Conv3d, kernel_sizes=3, strides=(1, 2, 2, 2, 2, 2),
+    #                           n_blocks_per_stage=(1, 3, 4, 6, 6, 6), num_classes=1,
+    #                           n_conv_per_stage_decoder=(1, 1, 1, 1, 1),
+    #                           conv_bias=True, norm_op=nn.InstanceNorm3d, norm_op_kwargs={}, dropout_op=None,
+    #                           nonlin=nn.LeakyReLU, nonlin_kwargs={'inplace': True}, deep_supervision=False).to(device)
 
     # Parameters: 31074550 -> batch 2 -> 18 - 19 Gb VRAM
     # Deep Supervision -> len 5
-    # net = PlainConvUNet(1, 6, (32, 64, 125, 256, 320, 320), nn.Conv3d, 3, (1, 2, 2, 2, 2, 2), (2, 2, 2, 2, 2, 2), 1,
-    #                             (2, 2, 2, 2, 2), False, nn.BatchNorm3d, None, None, None, nn.ReLU, deep_supervision=True).to(device)
+    net = PlainConvUNet(1, 6, (32, 64, 125, 256, 320, 320), nn.Conv3d, 3, (1, 2, 2, 2, 2, 2), (2, 2, 2, 2, 2, 2), 1,
+                                (2, 2, 2, 2, 2), False, nn.BatchNorm3d, None, None, None, nn.ReLU, deep_supervision=False).to(device)
     
     # print(net.compute_conv_feature_map_size((128, 128, 128)))  # -> 558319104. The value you see above was finetuned
     # from this one to match the regular nnunetplans more closely
+    
+    output = net(data)
+    print("Output shape", output.shape)
 
     if False:
         import hiddenlayer as hl

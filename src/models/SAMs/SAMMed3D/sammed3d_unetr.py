@@ -46,19 +46,19 @@ class SAMMed3D_UNETR(nn.Module):
         
         # Image Encoder using Vision Transformer (ViT)
         self.image_encoder_vit = ImageEncoderViT3D(
-                    depth=encoder_depth,
-                    embed_dim=embed_dim,
-                    img_size=img_size[0],
-                    mlp_ratio=4,
-                    norm_layer=partial(torch.nn.LayerNorm, eps=1e-6),
-                    num_heads=encoder_num_heads,
-                    patch_size=vit_patch_size,
-                    qkv_bias=True,
-                    use_rel_pos=True,
-                    global_attn_indexes=encoder_global_attn_indexes,
-                    window_size=14,
-                    out_chans=encoder_out_channels,
-                    in_chans=in_channels
+            depth=encoder_depth,
+            embed_dim=embed_dim,
+            img_size=img_size[0],
+            mlp_ratio=4,
+            norm_layer=partial(torch.nn.LayerNorm, eps=1e-6),
+            num_heads=encoder_num_heads,
+            patch_size=vit_patch_size,
+            qkv_bias=True,
+            use_rel_pos=True,
+            global_attn_indexes=encoder_global_attn_indexes,
+            window_size=14,
+            out_chans=encoder_out_channels,
+            in_chans=in_channels
         )
         
         if pretrained:

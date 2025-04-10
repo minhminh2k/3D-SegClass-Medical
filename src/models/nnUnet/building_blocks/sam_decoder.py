@@ -55,20 +55,18 @@ class SAMDecoder(nn.Module):
                 bias=encoder.conv_bias
             ))
             # input features to conv is 2x input_features_skip (concat input_features_skip with transpconv output)
-            if s== (n_stages_encoder - 4):     
+            if s == (n_stages_encoder - 5):     
                 stages.append(StackedConvBlocks(
-                    n_conv_per_stage[s-1], encoder.conv_op, 2 * input_features_skip+256, input_features_skip,
+                    n_conv_per_stage[s-1], encoder.conv_op, 2 * input_features_skip + 384, input_features_skip,
                     encoder.kernel_sizes[-(s + 1)], 1, encoder.conv_bias, encoder.norm_op, encoder.norm_op_kwargs,
                     encoder.dropout_op, encoder.dropout_op_kwargs, encoder.nonlin, encoder.nonlin_kwargs, nonlin_first
                 ))
-                print(stages[-1])
             else:
                 stages.append(StackedConvBlocks(
                     n_conv_per_stage[s-1], encoder.conv_op, 2 * input_features_skip, input_features_skip,
                     encoder.kernel_sizes[-(s + 1)], 1, encoder.conv_bias, encoder.norm_op, encoder.norm_op_kwargs,
                     encoder.dropout_op, encoder.dropout_op_kwargs, encoder.nonlin, encoder.nonlin_kwargs, nonlin_first
                 ))
-
 
 
             # we always build the deep supervision outputs so that we can always load parameters. If we don't do this
