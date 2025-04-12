@@ -149,7 +149,11 @@ configs/local/default.yaml
 /data/
 /logs/
 .env
-checkpoints/*
+*.pt
+*.pth
+*.model
+
+# checkpoints/
 # Aim logging
 .aim
 

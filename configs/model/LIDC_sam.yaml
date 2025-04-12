@@ -1,7 +1,7 @@
 _target_: src.models.LIDC_module.LIDC_Module
 defaults:
-  - criterion: dice_focal_loss_monai.yaml
-  - net: sam3d.yaml
+  - criterion: dice_ce_loss_monai.yaml
+  - net: sammed3D_unetr.yaml
   - scheduler: warmup_cosine_sam.yaml
 
 ce_loss: 
@@ -23,7 +23,7 @@ focal_loss:
 optimizer:
   _target_: torch.optim.AdamW
   _partial_: true
-  lr: 0.00008
+  lr: 0.0001
   weight_decay: 0.000001
 
 do_ds: False

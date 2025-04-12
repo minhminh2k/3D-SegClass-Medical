@@ -12,15 +12,15 @@ train_val_test_split: [80, 10, 10]
 image_size_before_resized: [128, 128, 128] # 64, 256, 256
 image_size: [128, 128, 128] # 64, 224, 224
 
-samples: 3
-batch_size: 1
+samples: 1
+batch_size: 2
 
 # SAM3D: batch 3 sample 1 
-# SwinUNETR: batch 1 sample 1 x 128 -> 14 Gb
+# SwinUNETR: batch 1 sample 1 x 128 -> 14-16 Gb
 # UNETR++: batch 4 x 128 -> 14.3 Gb ---- batch 3 samples 2 x 128 -> 23 Gb -> OOM ?
 # nnUnetResEnc: batch 1 samples 2 -> 16.3 Gb
 # UNETR: batch 1 samples 3 -> 19 Gb
-
+# SAMMED3D-UNETR: batch 2 samples 1 -> 18 Gb (bf16)
 num_nodule_samples: 2000
 num_lung_samples: 2000
 num_clean_samples: 1000

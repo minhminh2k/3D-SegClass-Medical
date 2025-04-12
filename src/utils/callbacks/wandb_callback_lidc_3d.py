@@ -176,7 +176,7 @@ class LIDC_3D_Callback(Callback):
         dataloader_idx: int = 0,
     ) -> None:
         
-        if len(self.n_samples_validation) < self.number_of_logged_samples * 20:
+        if len(self.n_samples_validation) < self.number_of_logged_samples * 30:
             for i, l, o in zip(batch["image"], batch["label"], outputs["preds"]):
                 self.n_samples_validation.append({
                     "image": i.squeeze(0).cpu(),
@@ -184,11 +184,11 @@ class LIDC_3D_Callback(Callback):
                     "preds": o.detach().squeeze(0)
                 })
             
-        self.n_samples_validation = self.n_samples_validation[:self.number_of_logged_samples]
 
     def on_validation_epoch_end(self, trainer: "pl.Trainer", pl_module: "pl.LightningModule"):
         # Random shuffle
         random.shuffle(self.n_samples_validation)
+        self.n_samples_validation = self.n_samples_validation[:self.number_of_logged_samples * 2]
 
         with torch.no_grad():
             for batch in self.n_samples_validation:
@@ -219,7 +219,7 @@ class LIDC_3D_Callback(Callback):
         dataloader_idx: int = 0,
     ) -> None:
         
-        if len(self.n_samples_test) < self.number_of_logged_samples * 20:
+        if len(self.n_samples_test) < self.number_of_logged_samples * 30:
             for i, l, o in zip(batch["image"], batch["label"], outputs["preds"]):
                 self.n_samples_test.append({
                     "image": i.squeeze(0).cpu(),
@@ -227,11 +227,12 @@ class LIDC_3D_Callback(Callback):
                     "preds": o.detach().squeeze(0)
                 })
             
-        self.n_samples_test = self.n_samples_test[:self.number_of_logged_samples]
 
     def on_test_epoch_end(self, trainer: "pl.Trainer", pl_module: "pl.LightningModule"):
         # Random shuffle
         random.shuffle(self.n_samples_test)
+        
+        self.n_samples_test = self.n_samples_test[:self.number_of_logged_samples * 2]
 
         with torch.no_grad():
             for batch in self.n_samples_test:
@@ -270,27 +271,27 @@ class LIDC_3D_Callback(Callback):
             colors=self.colors,
             transparency=0.4
         )
-        
+                
         volume_pred = gif_visualization(
             image=image,
             label=pred,
             num_classes=self.num_classes,
             colors=["#FFFF1E", "#00FF00", "#FF0000"],
             transparency=0.4,
-        )
-
+        ) # 128 x [128, 128, 3]
+        
         # Visualize with GIF
         if visualize_type == "gif":
             self._visualize_with_gif(volume_label=volume_label, volume_pred=volume_pred, case=case)
         else:
-            first_idx, last_idx = self._find_first_last(volume_label)
+            first_idx, last_idx = self._find_first_last(label)
             indices_to_show = self._choosing_slice(first_idx=first_idx, last_idx=last_idx)
 
             label_tensor = self._slices_to_tensor(slice_list=volume_label, indices=indices_to_show)
             pred_tensor = self._slices_to_tensor(slice_list=volume_pred, indices=indices_to_show)
-
-            label_grid = make_grid(label_tensor, nrow=4, padding=2)
-            pred_grid = make_grid(pred_tensor, nrow=4, padding=2)
+            
+            label_grid = make_grid(label_tensor, nrow=3, padding=2) # 9, 3, 128, 128
+            pred_grid = make_grid(pred_tensor, nrow=3, padding=2)
 
             grid_label_np = label_grid.numpy().transpose(1, 2, 0)
             grid_predict_np = pred_grid.numpy().transpose(1, 2, 0)
@@ -382,6 +383,6 @@ class LIDC_3D_Callback(Callback):
         tensor_list = []
         for i in indices:
             t = torch.from_numpy(slice_list[i])
-            t = t.unsqueeze(0)
+            t = t.permute(2, 0, 1)
             tensor_list.append(t)
         return torch.stack(tensor_list)
