@@ -37,7 +37,8 @@ class LIDC_3D_Callback(Callback):
         colors: tuple[str] = ["#00FF00", "#FFFF1E"],
         case_names: tuple[str] = [ "0068", "0027", "0050", "0061", "0074", "0101", "0117"],
         number_of_logged_samples: int = 2,
-        do_ds: bool = False
+        do_ds: bool = False,
+        coefficient: int = 5
     ):
         self.num_classes = num_classes
         self.roi_size = roi_size
@@ -54,6 +55,7 @@ class LIDC_3D_Callback(Callback):
         
         self.n_images_to_log = n_images_to_log
         self.number_of_logged_samples = number_of_logged_samples
+        self.coefficient = coefficient
         
         self.n_samples_validation = []
         self.n_samples_test = []
@@ -188,7 +190,7 @@ class LIDC_3D_Callback(Callback):
     def on_validation_epoch_end(self, trainer: "pl.Trainer", pl_module: "pl.LightningModule"):
         # Random shuffle
         random.shuffle(self.n_samples_validation)
-        self.n_samples_validation = self.n_samples_validation[:self.number_of_logged_samples * 2]
+        self.n_samples_validation = self.n_samples_validation[:self.number_of_logged_samples * self.coefficient]
 
         with torch.no_grad():
             for batch in self.n_samples_validation:
@@ -232,7 +234,7 @@ class LIDC_3D_Callback(Callback):
         # Random shuffle
         random.shuffle(self.n_samples_test)
         
-        self.n_samples_test = self.n_samples_test[:self.number_of_logged_samples * 2]
+        self.n_samples_test = self.n_samples_test[:self.number_of_logged_samples * self.coefficient]
 
         with torch.no_grad():
             for batch in self.n_samples_test:

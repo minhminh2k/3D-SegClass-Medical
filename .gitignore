@@ -152,7 +152,7 @@ configs/local/default.yaml
 *.pt
 *.pth
 *.model
-
+*.ckpt
 # checkpoints/
 # Aim logging
 .aim

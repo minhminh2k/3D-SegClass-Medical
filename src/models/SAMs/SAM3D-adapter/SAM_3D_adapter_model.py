@@ -105,7 +105,8 @@ class SAM_3D_Adapter(nn.Module):
         
     def forward(self, img, seg = None):
         out = F.interpolate(img.float(), scale_factor=512 / self.patch_size, mode='trilinear')
-        input_batch = out.to(self.device)
+        input_batch = out
+        # input_batch = img
         input_batch = input_batch[0].transpose(0, 1)
         batch_features, feature_list = self.image_encoder(input_batch)
         feature_list.append(batch_features)
@@ -145,8 +146,7 @@ class SAM_3D_Adapter(nn.Module):
         else:
             new_feature = feature_list
 
-        img_resize = F.interpolate(img[:, 0].permute(0, 2, 3, 1).unsqueeze(1).to(self.device), scale_factor=64/self.patch_size, # .to(device)
-            mode='trilinear')
+        img_resize = F.interpolate(img[:, 0].permute(0, 2, 3, 1).unsqueeze(1), scale_factor=64/self.patch_size, mode='trilinear')
         new_feature.append(img_resize)
         masks = self.mask_decoder(new_feature, 2, self.patch_size//64)
         masks = masks.permute(0, 1, 4, 2, 3)
@@ -281,7 +281,7 @@ class SAM_3D_Adapter(nn.Module):
                         num_heads=8))
                 prompt_encoder.load_state_dict(
                     torch.load(os.path.join(snapshot_path, file), map_location='cpu')["feature_dict"][i], strict=True)
-                prompt_encoder.to(device)
+                # prompt_encoder.to(device)
                 prompt_encoder_list.append(prompt_encoder)
             self.prompt_encoder_list = prompt_encoder_list
                 
@@ -433,12 +433,12 @@ def save_checkpoint(state, is_best, checkpoint):
 if __name__ == "__main__":
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     
-    input = torch.rand((1, 3, 128, 128, 128), dtype=torch.float) # .to("cuda")
+    input = torch.rand((1, 3, 128, 128, 128), dtype=torch.float).to("cuda")
     print(input.shape)
     model = SAM_3D_Adapter(
         device=device,
-        model_checkpoint = "/data/hpc/dqm/3D-SegClass-Medical/checkpoints/sam/sam_vit_b_01ec64.pth"
-    )
+        model_checkpoint = "/home/duong.quang.minh/project/3D-SegClass-Medical/checkpoints/sam/sam_vit_b_01ec64.pth"
+    ).to(device)
     
     _, output = model(input)
     print(output.shape) # torch.Size([batch, num_classes, 128, 128, 128])

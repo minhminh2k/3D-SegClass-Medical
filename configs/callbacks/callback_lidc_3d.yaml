@@ -12,6 +12,7 @@ wandb_callback:
   image_size_before_resized: ${data.image_size_before_resized}
   num_classes: 2
   do_ds: ${model.do_ds}
+  coefficient: 5
   case_names:
     [
       "0481",
