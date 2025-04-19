@@ -173,11 +173,6 @@ class LIDC_IDRI_3D_Dataset(Dataset):
                         random_center=True,
                         random_size=False
                     ),
-                    # transforms.Resized(
-                    #     keys=["image", "label"],
-                    #     spatial_size=self.image_size,
-                    #     mode=("trilinear", "nearest"),  # Image: trilinear, Label: nearest-neighbor
-                    # ),
                     transforms.ToTensord(keys=["image", "label"])
                 ]
             )

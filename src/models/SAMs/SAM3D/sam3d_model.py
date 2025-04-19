@@ -106,6 +106,7 @@ class Sam3D(SegmentationNetwork):
         conv_op = nn.Conv3d,
         num_modalities: int = 1,
         do_ds: bool = False,
+        freeze_image_encoder: bool = False
     ) -> None:
         """
         Args:
@@ -120,6 +121,7 @@ class Sam3D(SegmentationNetwork):
         self.sam_ckpt = ckpt
         self.do_ds = do_ds
         self.num_modalities = num_modalities
+        self.freeze_image_encoder = freeze_image_encoder
         
         if self.num_modalities > 1:
             self.decoder5 = BasicBlock(in_channels=256 * self.num_modalities, out_channels=128)
@@ -148,7 +150,7 @@ class Sam3D(SegmentationNetwork):
         
         # Freeze image encoder
         for param in sam.image_encoder.parameters():
-            param.requires_grad = False
+            param.requires_grad = self.freeze_image_encoder
         
         list_feature_encoder = []
         

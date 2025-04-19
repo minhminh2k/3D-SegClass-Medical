@@ -2,9 +2,7 @@ _target_: src.models.STU-Net.stunet_ft_model.STUNET_FT_Model
 
 input_channels: 1
 num_classes: 1
-depth: [1,1,1,1,1,1]
-dims: [32, 64, 128, 256, 512, 512]
-pool_op_kernel_sizes: [[2, 2, 2],[2, 2, 2],[2, 2, 2],[2, 2, 2],[1, 1, 2]]
-conv_kernel_sizes: [[3, 3, 3],[3, 3, 3],[3, 3, 3],[3, 3, 3],[3, 3, 3],[3, 3, 3]]
+model_type: "base"
 enable_deep_supervision: ${model.do_ds}
-pretrained_weights: "/home/duong.quang.minh/project/3D-SegClass-Medical/checkpoints/stunet/base_ep4k.model"
+pretrained_weights_base: "/home/duong.quang.minh/project/3D-SegClass-Medical/checkpoints/stunet/base_ep4k.model"
+pretrained_weights_large: "/home/duong.quang.minh/project/3D-SegClass-Medical/checkpoints/stunet/large_ep4k.model"

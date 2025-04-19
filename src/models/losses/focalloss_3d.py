@@ -15,7 +15,6 @@
 import numpy as np
 import torch
 from torch import nn
-from sam3d.utilities.nd_softmax import softmax_helper
 
 # taken from https://github.com/JunMa11/SegLoss/blob/master/test/nnUNetV2/loss_functions/focal_loss.py
 class FocalLoss(nn.Module):

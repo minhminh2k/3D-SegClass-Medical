@@ -13,6 +13,7 @@ from monai.metrics import DiceMetric, MeanIoU
 from monai.utils.enums import MetricReduction
 from monai.losses import DeepSupervisionLoss
 from monai.metrics import HausdorffDistanceMetric
+from monai.losses import AsymmetricUnifiedFocalLoss
 
 logging.basicConfig(
     level=logging.INFO,
@@ -169,8 +170,8 @@ class LIDC_Module_DS(LightningModule):
             - A tensor of target labels.
         """
         # B C H W D
-        image, target = batch["image"], batch["label"] # [batch, num_samples, 128, 128, 128], [batch, num_samples, 128, 128, 128]
-        logits = self.forward(image) # [batch, num_samples, 128, 128, 128]
+        image, target = batch["image"], batch["label"]
+        logits = self.forward(image)
         
         loss = self.criterion(logits, target)
         ce_loss = self.ce_loss(logits, target)
@@ -203,6 +204,7 @@ class LIDC_Module_DS(LightningModule):
         
         _ = self.train_dice(y_pred=outputs_convert, y=labels_list)
         _ = self.train_jaccard(y_pred=outputs_convert, y=labels_list)
+        _ = self.train_hd(y_pred=outputs_convert, y=labels_list)
         
         # logging.info(f"Training Step: {train_dice}") # Ex: tensor([[0.6667]], device='cuda:0')
         

@@ -1,29 +1,40 @@
-from typing import Union, Type, List, Tuple
+from typing import Union, Type, List, Tuple, Literal
 
 import os
 import torch
 from torch import nn
 from .network_architecture import STUNet
+from monai.losses import AsymmetricUnifiedFocalLoss
 
 class STUNET_FT_Model(nn.Module):
     def __init__(
         self,
-        input_channels: int = 1, 
+        input_channels: int = 1,
         num_classes: int = 1, 
-        depth: list = [1,1,1,1,1,1], 
-        dims: list = [32, 64, 128, 256, 512, 512], # [32 * x for x in [1, 2, 4, 8, 16, 16]]
-        pool_op_kernel_sizes: list = [[2, 2, 2],[2, 2, 2],[2, 2, 2],[2, 2, 2],[1, 1, 2]], 
-        conv_kernel_sizes: list = [[3,3,3]] * 6, 
         enable_deep_supervision: bool = False,
-        pretrained_weights: str = "/home/duong.quang.minh/project/3D-SegClass-Medical/checkpoints/stunet/base_ep4k.model"
+        model_type: Literal["base", "large"] = "base",
+        pretrained_weights_base: str = "/home/duong.quang.minh/project/3D-SegClass-Medical/checkpoints/stunet/base_ep4k.model",
+        pretrained_weights_large: str = "/home/duong.quang.minh/project/3D-SegClass-Medical/checkpoints/stunet/large_ep4k.model",
     ):
         """
         nonlin_first: if True you get conv -> nonlin -> norm. Else it's conv -> norm -> nonlin
         """
         super().__init__()
-        
-        self.pretrained_weights = pretrained_weights
-        
+
+        if model_type == "base":
+            depth = [1,1,1,1,1,1]
+            dims = [32 * x for x in [1, 2, 4, 8, 16, 16]]
+            self.pretrained_weights = pretrained_weights_base
+
+        if model_type == "large":
+            depth = [2] * 6
+            dims = [64 * x for x in [1, 2, 4, 8, 16, 16]]
+            self.pretrained_weights = pretrained_weights_large
+
+
+        pool_op_kernel_sizes = [[2, 2, 2],[2, 2, 2],[2, 2, 2],[2, 2, 2],[1, 1, 2]]
+        conv_kernel_sizes = [[3, 3, 3], [3, 3, 3], [3, 3, 3], [3, 3, 3], [3, 3, 3], [3, 3, 3]]
+                
         self.model = STUNet(
             input_channels=input_channels, 
             num_classes=num_classes, 
@@ -100,6 +111,9 @@ if __name__ == '__main__':
     
     model = STUNET_FT_Model().to(device)
     
+    # print(model.model)
+    # print(model.mod)
+
     # init lr: 1e-3
     # print(model.mod.state_dict()['conv_blocks_context.0.0.conv1.weight'])
     

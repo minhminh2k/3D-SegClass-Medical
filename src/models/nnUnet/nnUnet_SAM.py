@@ -90,6 +90,7 @@ class SAMMed3D_nnUnet(nn.Module):
         if pretrained:
             image_encoder_model_state=torch.load(sam_image_encoder_ckpt, weights_only = False)
             self.sam_image_encoder.load_state_dict(state_dict=image_encoder_model_state)
+            print("Load ViT weight from SAM-MED3D")
             
             if not trainable_encoder:
                 for param in self.sam_image_encoder.parameters():

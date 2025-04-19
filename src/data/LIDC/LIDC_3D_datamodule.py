@@ -84,6 +84,7 @@ class LIDC_IDRI_3D_Datamodule(LightningDataModule):
         num_classes: int = 2,
         samples: int = 1,
         nodule_clean_divide: bool = True,
+        shuffle_seed: bool = True
     ) -> None:
         """Initialize a `MonAIBraTsDataModule`.
 
@@ -104,6 +105,8 @@ class LIDC_IDRI_3D_Datamodule(LightningDataModule):
         self.data_test: Optional[Dataset] = None
 
         self.batch_size_per_device = batch_size
+        
+        self.shuffle_seed = shuffle_seed
 
     @property
     def num_classes(self) -> int:
@@ -258,7 +261,8 @@ class LIDC_IDRI_3D_Datamodule(LightningDataModule):
             
     
     def _split_data(self, file_paths, train_val_test_split) -> Tuple[list, list, list]:
-        np.random.seed(42) # If needed
+        if self.shuffle_seed:
+            np.random.seed(42) # If needed
         
         # get len files
         num_files = len(file_paths)

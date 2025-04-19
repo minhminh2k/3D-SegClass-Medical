@@ -7,3 +7,4 @@ ckpt: "/home/duong.quang.minh/project/3D-SegClass-Medical/checkpoints/sam/sam_vi
 vit_name: 'vit_b'
 num_modalities: 1
 do_ds: ${model.do_ds}
+freeze_image_encoder: True

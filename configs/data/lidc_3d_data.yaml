@@ -15,18 +15,24 @@ image_size: [128, 128, 128] # 64, 224, 224
 samples: 2
 batch_size: 1
 
-# SAM3D: batch 3 sample 1 
+# SAM3D: batch 4 sample 2 -> 16 Gb
 # SwinUNETR: batch 1 sample 1 x 128 -> 14-16 Gb
 # UNETR++: batch 4 x 128 -> 14.3 Gb ---- batch 3 samples 2 x 128 -> 23 Gb -> OOM ?
 # nnUnetResEnc: batch 1 samples 2 -> 16.3 Gb
 # UNETR: batch 1 samples 3 -> 19 Gb
 # SAMMED3D-UNETR: batch 2 samples 1 -> 18 Gb (bf16)
-num_nodule_samples: 2000
-num_lung_samples: 2000
-num_clean_samples: 1000
+# nnFormer: batch 1 samples 2 -> 17 Gb -> Shit
+# STU-Net-B: batch 1 samples 2 -> 17 Gb 
+# STU-Net-L: batch 1 sample 1 -> > 20 
+# nnSAM: 
+
+num_nodule_samples: 1000
+num_lung_samples: 1000
+num_clean_samples: 500
 
 data_type: "image"
 num_classes: 2
+shuffle_seed: False
 
 # True -> get from Image
 # False -> get from Lung_Segmentation_v2

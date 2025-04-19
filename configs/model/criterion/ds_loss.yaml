@@ -1,16 +1,28 @@
 _target_: monai.losses.DeepSupervisionLoss
 
 loss:
-  _target_: monai.losses.DiceFocalLoss
-  include_background: True
-  sigmoid: True
-  softmax: False
-  squared_pred: True
-  jaccard: false
-  smooth_nr: 0.00001
-  smooth_dr: 0.00001
-  lambda_dice: 1.0
-  lambda_focal: 1.0
+  # _target_: monai.losses.DiceCELoss
+  # include_background: True
+  # sigmoid: True
+  # softmax: False
+  # squared_pred: True
+  # jaccard: false
+  # smooth_nr: 0.00001
+  # smooth_dr: 0.00001
+  # lambda_dice: 1.0
+  # lambda_ce: 1.0
+
+  # _target_: monai.losses.unified_focal_loss.AsymmetricUnifiedFocalLoss
+  # to_onehot_y: False
+  # num_classes: 2
+  # weight: 0.5
+  # gamma: 0.5
+  # delta: 0.
+  
+  _target_: src.models.losses.focal_tversky_3d.FocalTverskyLoss
+  alpha: 0.7
+  beta: 0.3
+  gamma: 0.75
 
 weight_mode: "exp"
-weights: [1, 0.5, 0.25, 0.125]
+# weights: [1, 0.5, 0.25, 0.125, 0.1]
