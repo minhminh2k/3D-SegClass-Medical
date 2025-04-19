@@ -1,5 +1,0 @@
-_target_: src.models.losses.dice_loss_monai.DiceLossMonAI
-
-to_onehot_y: False
-sigmoid: True
-softmax: False

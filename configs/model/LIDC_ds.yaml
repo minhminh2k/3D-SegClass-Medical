@@ -7,17 +7,20 @@ defaults:
 ds_ce_loss: 
   _target_: monai.losses.DeepSupervisionLoss
   loss:
-    _target_: src.models.losses.CE_loss.CELossMonAI
+    _target_: src.models.losses.monai_losses.CELoss
     reduction: mean
 
 ds_dice_loss: 
   _target_: monai.losses.DeepSupervisionLoss
   loss:
-    _target_: monai.losses.DiceLoss
+    _target_: src.models.losses.monai_losses.DiceLoss
     to_onehot_y: False
     sigmoid: True
     softmax: False
     include_background: True
+    squared_pred: False
+    smooth_nr: 0.00001
+    smooth_dr: 0.00001
 
 ds_focal_loss:
   _target_: monai.losses.DeepSupervisionLoss

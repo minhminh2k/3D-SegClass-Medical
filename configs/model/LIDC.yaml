@@ -5,11 +5,11 @@ defaults:
   - scheduler: warmup_cosine.yaml
 
 ce_loss: 
-  _target_: src.models.losses.CE_loss.CELossMonAI
+  _target_: src.models.losses.monai_losses.CELoss
   reduction: mean
 
 dice_loss: 
-  _target_: monai.losses.DiceLoss
+  _target_: src.models.losses.monai_losses.DiceLoss
   to_onehot_y: False
   sigmoid: True
   softmax: False

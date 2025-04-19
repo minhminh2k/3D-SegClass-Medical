@@ -1,11 +1,11 @@
 _target_: monai.losses.DeepSupervisionLoss
 
 loss:
-  _target_: monai.losses.DiceCELoss
+  _target_: src.models.losses.monai_losses.DiceCELoss
   include_background: True
   sigmoid: True
   softmax: False
-  squared_pred: True
+  squared_pred: False
   jaccard: false
   smooth_nr: 0.00001
   smooth_dr: 0.00001

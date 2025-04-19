@@ -1,4 +1,4 @@
-_target_: monai.losses.DiceCELoss
+_target_: src.models.losses.monai_losses.DiceCELoss
 
 include_background: True
 sigmoid: True
