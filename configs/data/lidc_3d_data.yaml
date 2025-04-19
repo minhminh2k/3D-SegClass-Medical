@@ -22,7 +22,7 @@ batch_size: 1
 # UNETR: batch 1 samples 3 -> 19 Gb
 # SAMMED3D-UNETR: batch 2 samples 1 -> 18 Gb (bf16)
 # nnFormer: batch 1 samples 2 -> 17 Gb -> Shit
-# STU-Net-B: batch 1 samples 2 -> 17 Gb 
+# STU-Net-B: batch 1 samples 2 -> 17 Gb ------- DS -> 20 Gb
 # STU-Net-L: batch 1 sample 1 -> > 20 
 # nnSAM: 
 
