@@ -325,13 +325,6 @@ class SymmetricUnifiedFocalLoss(nn.Module):
 
         if len(y_pred.shape) != 4 and len(y_pred.shape) != 5:
             raise ValueError(f"input shape must be 4 or 5, but got {y_pred.shape}")
-        
-        # Ensure the predictions are in the same dimension as y_true
-        y_pred = torch.sigmoid(y_pred)
-        
-        if y_pred.shape[1] == 1:
-            y_pred = one_hot(y_pred, num_classes=self.num_classes)
-            y_true = one_hot(y_true, num_classes=self.num_classes)
             
         if torch.max(y_true) != self.num_classes - 1:
             raise ValueError(f"Please make sure the number of classes is {self.num_classes-1}")
@@ -423,12 +416,6 @@ class AsymmetricUnifiedFocalLoss(nn.Module):
 
         if len(y_pred.shape) != 4 and len(y_pred.shape) != 5:
             raise ValueError(f"input shape must be 4 or 5, but got {y_pred.shape}")
-
-        y_pred = torch.sigmoid(y_pred)
-        
-        if y_pred.shape[1] == 1:
-            y_pred = one_hot(y_pred, num_classes=self.num_classes)
-            y_true = one_hot(y_true, num_classes=self.num_classes)
         
         if torch.max(y_true) != self.num_classes - 1:
             raise ValueError(f"Please make sure the number of classes is {self.num_classes-1}")
