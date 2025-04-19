@@ -1,0 +1,30 @@
+_target_: src.data.LIDC.LIDC_3D_Vista_datamodule.LIDC_IDRI_3D_Vista_Datamodule
+
+defaults:
+  - transform_train: lidc_vista_3d.yaml
+  - transform_val: lidc_vista_3d.yaml
+
+data_nodule_dir: "/mnt/nvme1n1/duong.quang.minh/data/Image"
+data_clean_dir: "/mnt/nvme1n1/duong.quang.minh/data/Clean/Image"
+data_lung_dir: "/mnt/nvme1n1/duong.quang.minh/data/Lung_Segmentation_v2"
+
+train_val_test_split: [80, 10, 10]
+image_size_before_resized: [128, 128, 128]
+image_size: [128, 128, 128]
+
+samples: 1
+batch_size: 1
+# batch 1 sample 1 ->  15 Gb
+
+num_nodule_samples: 2000
+num_lung_samples: 2000
+num_clean_samples: 1000
+
+data_type: "image"
+num_classes: 2
+shuffle_seed: True
+
+nodule_clean_divide: True
+num_workers: 8
+pin_memory: False
+

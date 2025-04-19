@@ -1,0 +1,10 @@
+_target_: src.models.vista3D.vista3d_ft_model.Vista3D_FT_Model
+
+in_channels: 1
+encoder_embed_dim: 48
+label_mappings:
+  default:
+    - [1, 23]
+label_set: [0, 23]
+label_dict_path: "/home/duong.quang.minh/project/3D-SegClass-Medical/preprocess_data/vista3d/label_dict.json"
+pretrained_weights: "/home/duong.quang.minh/project/3D-SegClass-Medical/checkpoints/vista3d/model_vista3d.pt"

@@ -1,0 +1,38 @@
+_target_: src.models.vista3D.vista3d_module.LIDC_VISTA_Module
+defaults:
+  - criterion: dice_ce_loss_monai.yaml
+  - net: vista3d.yaml
+  - scheduler: warmup_cosine_sam.yaml
+
+ce_loss: 
+  _target_: src.models.losses.CE_loss.CELossMonAI
+  reduction: mean
+
+dice_loss: 
+  _target_: src.models.losses.dice_loss_monai.DiceLossMonAI
+  to_onehot_y: False
+  sigmoid: True
+  softmax: False
+  include_background: True
+
+optimizer:
+  _target_: torch.optim.AdamW
+  _partial_: true
+  lr: 0.00005
+  weight_decay: 0.000001
+
+roi_size: [128, 128, 128]
+sw_batch_size: 1
+do_ds: False
+
+label_set: [0, 23]
+max_point: 5
+max_prompt: 32
+max_backprompt: 4
+max_foreprompt: null
+drop_label_prob: 0.2
+drop_point_prob: 0.2
+
+# compile model for faster training with pytorch 2.0
+compile: false
+num_classes: 2 # including background

@@ -1,0 +1,47 @@
+_target_: monai.transforms.Compose
+
+transforms:
+  - _target_: monai.transforms.LoadImaged
+    keys: ["image", "label"]
+    ensure_channel_first: True
+
+  - _target_: monai.transforms.RandCropByPosNegLabeld
+    keys: ["image", "label"]
+    label_key: "label"
+    spatial_size: ${data.image_size_before_resized}
+    pos: 1
+    neg: 0
+    num_samples: ${data.samples}
+    image_key: "image"
+    image_threshold: 0
+
+  - _target_: monai.transforms.RandFlipd
+    keys: ["image", "label"]
+    prob: 0.5
+    spatial_axis: 0
+
+  - _target_: monai.transforms.RandFlipd
+    keys: ["image", "label"]
+    prob: 0.5
+    spatial_axis: 2
+
+  - _target_: monai.transforms.RandAffined
+    keys: ["image", "label"]
+    prob: 0.5
+    rotate_range: [0.1, 0.1, 0.1]
+    scale_range: [0.02, 0.02, 0.02]
+    mode: ["trilinear", "nearest"]
+
+  - _target_: monai.transforms.RandScaleIntensityd
+    keys: "image"
+    factors: 0.02
+    prob: 0.5
+
+  - _target_: monai.apps.vista3d.transforms.Relabeld
+    keys: "label"
+    label_mappings:
+      default:
+        - [1, 23] # 134
+
+  - _target_: monai.transforms.ToTensord
+    keys: ["image", "label"]

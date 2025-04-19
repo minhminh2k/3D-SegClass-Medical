@@ -1,0 +1,47 @@
+wandb_callback:
+  _target_: src.utils.callbacks.wandb_callback_vista_3d.LIDC_Vista_3D_Callback
+  data_nodule_dir: ${data.data_nodule_dir}
+  data_lung_dir: ${data.data_lung_dir}
+  data_clean_dir: ${data.data_clean_dir}
+  data_type: ${data.data_type}
+  classes_name: ["Lung Nodule"]
+  colors: ["#00FF00", "#FFFF1E", "#FF0000"]
+  n_images_to_log: ${data.samples} # train
+  number_of_logged_samples: ${data.samples} # validation
+  roi_size: ${model.roi_size}
+  num_classes: 2
+  coefficient: 2
+  sw_batch_size: ${model.sw_batch_size}
+  label_set: ${model.label_set}
+  label_mappings:
+      default:
+      - [1, 23]
+  case_names:
+    [
+      "0481",
+      "0912",
+      "0050",
+      "0624",
+      "0462",
+      "0001",
+      "0098",
+      "0565",
+      "0423",
+      "0003",
+      "0139",
+      "0485",
+      "0045",
+      "0563",
+      "0061",
+      "0404",
+      "0415",
+      "0815",
+      "0854",
+      "0858",
+      "0942",
+      "0978",
+      "0998",
+      "0834"
+    ]
+  
+  

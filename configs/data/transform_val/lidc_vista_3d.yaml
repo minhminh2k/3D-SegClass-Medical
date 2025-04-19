@@ -1,0 +1,15 @@
+_target_: monai.transforms.Compose
+
+transforms:
+  - _target_: monai.transforms.LoadImaged
+    keys: ["image", "label"]
+    ensure_channel_first: True
+    
+  - _target_: monai.apps.vista3d.transforms.Relabeld
+    keys: "label"
+    label_mappings:
+      default:
+      - [1, 23] # 134
+  
+  - _target_: monai.transforms.ToTensord
+    keys: ["image", "label"]

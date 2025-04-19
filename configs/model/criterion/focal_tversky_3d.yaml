@@ -1,0 +1,5 @@
+_target_: src.models.losses.focal_tversky_3d.FocalTverskyLoss
+
+alpha: 0.7
+beta: 0.3
+gamma: 0.75
