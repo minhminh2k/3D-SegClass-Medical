@@ -38,7 +38,8 @@ class LIDC_3D_Callback(Callback):
         case_names: tuple[str] = [ "0068", "0027", "0050", "0061", "0074", "0101", "0117"],
         number_of_logged_samples: int = 2,
         do_ds: bool = False,
-        coefficient: int = 5
+        coefficient: int = 5,
+        softmax: bool = False
     ):
         self.num_classes = num_classes
         self.roi_size = roi_size
@@ -46,6 +47,7 @@ class LIDC_3D_Callback(Callback):
         self.classes_name = classes_name
         self.colors = colors
         self.do_ds = do_ds
+        self.softmax = softmax
         
         self.data_nodule_dir = data_nodule_dir
         self.data_clean_dir = data_clean_dir
@@ -94,44 +96,11 @@ class LIDC_3D_Callback(Callback):
                     num_samples=1, # number of cropped samples
                     image_key="image",
                 ),
-                # transforms.Resized(
-                #     keys=["image", "label"],
-                #     spatial_size=self.roi_size,
-                #     mode=("trilinear", "nearest"),  # Image: trilinear, Label: nearest-neighbor
-                # ),
                 transforms.ToTensord(keys=["image", "label"])
             ]
         )
         
     def on_train_start(self, trainer: "pl.Trainer", pl_module: "pl.LightningModule"):
-        # # First sample in case names
-        # image = np.load(self.image_dict[0]["image"])
-        # label = np.load(self.image_dict[0]["label"])
-        
-        # # Clipped
-        # image[image > self.max_px] = self.max_px
-        # image[image < self.min_px] = self.min_px
-        
-        # volume = gif_visualization(
-        #     image=image,
-        #     label=label,
-        #     num_classes=self.num_classes,
-        #     colors=self.colors,
-        #     transparency=0.4
-        # )
-        
-        # frames = [Image.fromarray(volume[i]) for i in range(len(volume))]
-        # gif_buffer = BytesIO()
-        # frames[0].save(gif_buffer, format="GIF", save_all=True, append_images=frames[1:], duration=100, loop=0)
-        # gif_buffer.seek(0)
-        
-        # # trainer.logger.log_image(
-        # #     key=f"Ground truth sample",
-        # #     images=[wandb.Video(gif_buffer, format="gif")],
-        # # )
-        # wandb.log({"Ground truth sample": wandb.Video(gif_buffer, format="gif")})
-        
-        # gif_buffer.close()
         pass
 
     def on_train_epoch_end(self, trainer: "pl.Trainer", pl_module: "pl.LightningModule"):
@@ -146,13 +115,25 @@ class LIDC_3D_Callback(Callback):
             image = image.unsqueeze(0).to(trainer.model.device)
             
             if not self.do_ds:
-                prob = torch.sigmoid(trainer.model(image)) # [1, 1, 128, 128, 128]
+                if not self.softmax:
+                    prob = torch.sigmoid(trainer.model(image)) # [1, 1, 128, 128, 128]
+                    seg = prob[0].detach().cpu().numpy() # [1, 128, 128, 128]
+                    seg = (seg > 0.5).astype(np.int8)
+                else:
+                    prob = trainer.model(image)
+                    prob = torch.softmax(prob, dim=1).detach().cpu().numpy()
+                    prob = np.argmax(prob, axis=1).astype(np.uint8)
+                    seg = prob # [1, 128, 128, 128]
             else:
-                prob = torch.sigmoid(trainer.model(image)[0])
-                
-            seg = prob[0].detach().cpu().numpy() # [1, 128, 128, 128]
-
-            seg = (seg > 0.5).astype(np.int8)
+                if not self.softmax:
+                    prob = torch.sigmoid(trainer.model(image)[0])
+                    seg = prob[0].detach().cpu().numpy() # [1, 128, 128, 128]
+                    seg = (seg > 0.5).astype(np.int8)
+                else:
+                    prob = trainer.model(image)[0] # [1, 2, 128, 128, 128]
+                    prob = torch.softmax(prob, dim=1).detach().cpu().numpy() # [1, 2, 128, 128, 128]                    
+                    prob = np.argmax(prob, axis=1).astype(np.uint8) # [1, 128, 128, 128]
+                    seg = prob
                         
             image = image.squeeze(0)         
             case = self.image_dict[i]["case"]            
@@ -195,10 +176,15 @@ class LIDC_3D_Callback(Callback):
         with torch.no_grad():
             for batch in self.n_samples_validation:
                 image = batch["image"] # [128, 128, 128]
-                label = batch["label"] # [128, 128, 128]                
-                prob = torch.sigmoid(batch["preds"].unsqueeze(0))
-                seg = prob[0].cpu().numpy()
-                seg = (seg > 0.5).astype(np.int8)
+                label = batch["label"] # [128, 128, 128]
+                if not self.softmax:              
+                    prob = torch.sigmoid(batch["preds"].unsqueeze(0))
+                    seg = prob[0].cpu().numpy()
+                    seg = (seg > 0.5).astype(np.int8)
+                else:
+                    prob = torch.softmax(batch["preds"].unsqueeze(0), dim=1).detach().cpu().numpy()                    
+                    prob = np.argmax(prob, axis=1).astype(np.uint8)                    
+                    seg = prob[0] # [1, 128, 128, 128]
                 
                 self.visualization_process(
                     trainer=trainer,
@@ -241,9 +227,14 @@ class LIDC_3D_Callback(Callback):
                 image = batch["image"] # [128, 128, 128]
                 label = batch["label"] # [128, 128, 128]
                                 
-                prob = torch.sigmoid(batch["preds"].unsqueeze(0))
-                seg = prob[0].cpu().numpy()
-                seg = (seg > 0.5).astype(np.int8)
+                if not self.softmax:              
+                    prob = torch.sigmoid(batch["preds"].unsqueeze(0))
+                    seg = prob[0].cpu().numpy()
+                    seg = (seg > 0.5).astype(np.int8)
+                else:
+                    prob = torch.softmax(batch["preds"].unsqueeze(0), dim=1).detach().cpu().numpy()
+                    prob = np.argmax(prob, axis=1).astype(np.uint8)
+                    seg = prob[0] # [1, 128, 128, 128]
                 
                 self.visualization_process(
                     trainer=trainer,

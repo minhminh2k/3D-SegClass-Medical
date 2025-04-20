@@ -25,7 +25,7 @@ class SAMMed3D_nnUnet(nn.Module):
         input_channels: int,
         n_stages: int,
         features_per_stage: Union[int, List[int], Tuple[int, ...]],
-        conv_op: Type[_ConvNd],
+        conv_op: Type[_ConvNd] = nn.Conv3d,
         kernel_sizes: Union[int, List[int], Tuple[int, ...]] = 3,
         strides: Union[int, List[int], Tuple[int, ...]] = (1, 2, 2, 2, 2, 2),
         n_conv_per_stage: Union[int, List[int], Tuple[int, ...]] = [2, 2, 2, 2, 2, 2],
@@ -44,7 +44,7 @@ class SAMMed3D_nnUnet(nn.Module):
         # sam_model_type: str = "vit_t",
         sam_image_encoder_ckpt: str = "/home/duong.quang.minh/project/3D-SegClass-Medical/checkpoints/sammed3d/sam_med3d_turbo_image_encoder.pth",
         pretrained: bool = True,
-        trainable_encoder: bool = False,
+        trainable_encoder: bool = True,
     ):
         """
         nonlin_first: if True you get conv -> nonlin -> norm. Else it's conv -> norm -> nonlin

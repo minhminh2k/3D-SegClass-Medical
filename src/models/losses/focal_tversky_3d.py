@@ -3,6 +3,7 @@ import torch.nn as nn
 from monai.losses import AsymmetricUnifiedFocalLoss
 from monai.utils import LossReduction
 from monai.networks import one_hot
+import logging
 
 # https://github.com/IvanVassi/FocalTversky3D_pytorch/blob/main/README.md
 # https://github.com/mlyg/unified-focal-loss/blob/main/loss_functions.py
@@ -10,6 +11,8 @@ from monai.networks import one_hot
 class FocalTverskyLoss(nn.Module):
     """A Novel Focal Tversky loss function with improved Attention U-Net for lesion segmentation
     Link: https://arxiv.org/abs/1810.07842
+
+    For binary segmentation -> sigmoid
     """
     def __init__(
         self, 
@@ -285,15 +288,19 @@ class SymmetricUnifiedFocalLoss(nn.Module):
     Michael Yeung, Computerized Medical Imaging and Graphics
     """
     def __init__(
-        self, 
+        self,
+        to_onehot_y: bool = True,
         num_classes: int = 2,
         weight: float = 0.5,
         delta: float = 0.7,
         gamma: float = 0.5,
         epsilon: float = 1e-7,
+        softmax: bool = True,
         reduction: LossReduction | str = LossReduction.MEAN,
     ):
         super().__init__()
+        self.to_onehot_y = to_onehot_y
+        self.softmax = softmax
         self.delta = delta
         self.gamma = gamma
         self.epsilon = epsilon
@@ -320,14 +327,22 @@ class SymmetricUnifiedFocalLoss(nn.Module):
             ValueError: When num_classes
             ValueError: When the number of classes entered does not match the expected number
         """
-        if y_pred.shape != y_true.shape:
-            raise ValueError(f"ground truth has different shape ({y_true.shape}) from input ({y_pred.shape})")
-
         if len(y_pred.shape) != 4 and len(y_pred.shape) != 5:
             raise ValueError(f"input shape must be 4 or 5, but got {y_pred.shape}")
-            
-        if torch.max(y_true) != self.num_classes - 1:
-            raise ValueError(f"Please make sure the number of classes is {self.num_classes-1}")
+        
+        n_pred_ch = y_pred.shape[1]
+        
+        if self.softmax:
+            if n_pred_ch == 1:
+                raise ValueError("single channel prediction, `softmax=True` ignored.")
+            else:
+                y_pred = torch.softmax(y_pred, 1)
+
+        if self.to_onehot_y:
+            if n_pred_ch == 1:
+                raise ValueError("single channel prediction, `to_onehot_y=True` ignored.")
+            else:
+                y_true = one_hot(y_true, num_classes=n_pred_ch)
         
         sy_focal_loss = self.sy_focal_loss(y_pred, y_true)
         sy_focal_tversky_loss = self.sy_focal_tversky_loss(y_pred, y_true)
@@ -359,11 +374,12 @@ class AsymmetricUnifiedFocalLoss(nn.Module):
 
     def __init__(
         self,
-        to_onehot_y: bool = False,
+        to_onehot_y: bool = True,
         num_classes: int = 2,
         weight: float = 0.5,
         gamma: float = 0.5,
         delta: float = 0.7,
+        softmax: bool = True,
         reduction: LossReduction | str = LossReduction.MEAN,
     ):
         """
@@ -390,6 +406,7 @@ class AsymmetricUnifiedFocalLoss(nn.Module):
         self.delta = delta
         self.weight: float = weight
         self.reduction = reduction
+        self.softmax = softmax
         self.asy_focal_loss = AsymmetricFocalLoss(gamma=self.gamma, delta=self.delta)
         self.asy_focal_tversky_loss = AsymmetricFocalTverskyLoss(gamma=self.gamma, delta=self.delta)
 
@@ -410,15 +427,23 @@ class AsymmetricUnifiedFocalLoss(nn.Module):
             ValueError: When num_classes
             ValueError: When the number of classes entered does not match the expected number
         """
-        
-        if y_pred.shape != y_true.shape:
-            raise ValueError(f"ground truth has different shape ({y_true.shape}) from input ({y_pred.shape})")
 
         if len(y_pred.shape) != 4 and len(y_pred.shape) != 5:
             raise ValueError(f"input shape must be 4 or 5, but got {y_pred.shape}")
         
-        if torch.max(y_true) != self.num_classes - 1:
-            raise ValueError(f"Please make sure the number of classes is {self.num_classes-1}")
+        n_pred_ch = y_pred.shape[1]
+        
+        if self.softmax:
+            if n_pred_ch == 1:
+                raise ValueError("single channel prediction, `softmax=True` ignored.")
+            else:
+                y_pred = torch.softmax(y_pred, 1)
+
+        if self.to_onehot_y:
+            if n_pred_ch == 1:
+                raise ValueError("single channel prediction, `to_onehot_y=True` ignored.")
+            else:
+                y_true = one_hot(y_true, num_classes=n_pred_ch)
 
         asy_focal_loss = self.asy_focal_loss(y_pred, y_true)
         asy_focal_tversky_loss = self.asy_focal_tversky_loss(y_pred, y_true)

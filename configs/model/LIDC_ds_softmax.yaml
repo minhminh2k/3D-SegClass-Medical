@@ -1,0 +1,47 @@
+_target_: src.models.LIDC_module_softmax.LIDC_Module_DS_Softmax
+defaults:
+  - criterion: ds_loss_softmax.yaml
+  - net: unetrpp.yaml
+  - scheduler: warmup_cosine.yaml
+
+ds_ce_loss: 
+  _target_: monai.losses.DeepSupervisionLoss
+  loss:
+    _target_: src.models.losses.monai_losses.CELoss
+    reduction: mean
+
+ds_dice_loss: 
+  _target_: monai.losses.DeepSupervisionLoss
+  loss:
+    _target_: src.models.losses.monai_losses.DiceLoss
+    to_onehot_y: True
+    sigmoid: False
+    softmax: True
+    include_background: True
+    squared_pred: False
+    smooth_nr: 0.00001
+    smooth_dr: 0.00001
+
+ds_focal_loss:
+  _target_: monai.losses.DeepSupervisionLoss
+  loss: 
+    _target_: monai.losses.FocalLoss
+    to_onehot_y: True
+    include_background: True
+
+optimizer:
+  _target_: torch.optim.AdamW
+  _partial_: true
+  lr: 0.001 # 0.00002
+  weight_decay: 0.000001
+
+do_ds: True
+
+# scheduler:
+#   _target_: torch.optim.lr_scheduler.CosineAnnealingLR
+#   _partial_: true
+#   T_max: ${trainer.max_epochs}
+  
+# compile model for faster training with pytorch 2.0
+compile: false
+num_classes: 2 # including background

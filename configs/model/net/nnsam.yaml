@@ -12,4 +12,4 @@ conv_bias: False
 deep_supervision: False
 sam_image_encoder_ckpt: "/home/duong.quang.minh/project/3D-SegClass-Medical/checkpoints/sammed3d/sam_med3d_turbo_image_encoder.pth"
 pretrained: True
-trainable_encoder: False
+trainable_encoder: True

@@ -1,7 +1,7 @@
 _target_: src.models.LIDC_module.LIDC_Module
 defaults:
   - criterion: dice_ce_loss_monai.yaml
-  - net: stunet_ft.yaml
+  - net: nnsam.yaml
   - scheduler: warmup_cosine_sam.yaml
 
 ce_loss: 
