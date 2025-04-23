@@ -12,7 +12,7 @@ train_val_test_split: [80, 10, 10]
 image_size_before_resized: [128, 128, 128] # 64, 256, 256
 image_size: [128, 128, 128] # 64, 224, 224
 
-samples: 2
+samples: 1
 batch_size: 1
 
 # SAM3D: batch 4 sample 2 -> 16 Gb

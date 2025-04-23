@@ -1,6 +1,6 @@
 _target_: src.models.optimizers.lr_scheduler.LinearWarmupCosineAnnealingLR
 _partial_: true
-warmup_epochs: 15
+warmup_epochs: 20
 max_epochs: ${trainer.max_epochs}
 warmup_start_lr: 0.00001
 eta_min: 0.000002

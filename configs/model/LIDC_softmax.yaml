@@ -1,7 +1,7 @@
-_target_: src.models.LIDC_module.LIDC_Module
+_target_: src.models.LIDC_softmax.LIDC_Module_Softmax
 defaults:
-  - criterion: ce_loss.yaml
-  - net: unetrpp.yaml
+  - criterion: asymm_focal.yaml
+  - net: SwinUNETR.yaml
   - scheduler: warmup_cosine.yaml
 
 ce_loss: 
@@ -10,31 +10,29 @@ ce_loss:
 
 dice_loss: 
   _target_: src.models.losses.monai_losses.DiceLoss
-  to_onehot_y: False
-  sigmoid: True
-  softmax: False
+  to_onehot_y: True
+  sigmoid: False
+  softmax: True
   include_background: False
-  squared_pred: True
+  squared_pred: False
   smooth_nr: 0.00001
   smooth_dr: 0.00001
 
 focal_loss:
   _target_: monai.losses.FocalLoss
-  to_onehot_y: False
+  to_onehot_y: True
   include_background: False
 
 optimizer:
   _target_: torch.optim.AdamW
   _partial_: true
-  lr: 0.0005
-  weight_decay: 0.00001
+  lr: 0.0001 # 0.00002
+  weight_decay: 0.000001
 
 do_ds: False
-
-# scheduler:
-#   _target_: torch.optim.lr_scheduler.CosineAnnealingLR
-#   _partial_: true
-#   T_max: ${trainer.max_epochs}
+roi_size: [128, 128, 128]
+sw_batch_size: 1
+infer_overlap: 0.25
   
 # compile model for faster training with pytorch 2.0
 compile: false

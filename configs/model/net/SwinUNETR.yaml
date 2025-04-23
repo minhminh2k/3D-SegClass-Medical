@@ -2,7 +2,7 @@ _target_: src.models.swin-unetr.SwinUNETR.SwinUNETR
 
 img_size: ${data.image_size}
 in_channels: 1 # Brats: 4 ---- BTCV: 1
-out_channels: 1 # Brats: 3 ---- BTCV: 14
+out_channels: 2 # Brats: 3 ---- BTCV: 14
 patch_size: 2
 depths: [2, 2, 2, 2]
 num_heads: [3, 6, 12, 24]

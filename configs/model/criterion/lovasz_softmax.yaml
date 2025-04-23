@@ -1,0 +1,3 @@
+_target_: src.models.losses.lovasz_loss.LovaszSoftmax
+
+reduction: mean

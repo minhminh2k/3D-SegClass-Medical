@@ -1,8 +1,8 @@
 _target_: src.models.LIDC_module_softmax.LIDC_Module_DS_Softmax
 defaults:
-  - criterion: ds_loss_softmax.yaml
-  - net: unetrpp.yaml
-  - scheduler: warmup_cosine.yaml
+  - criterion: asymm_focal.yaml
+  - net: stunet_ft.yaml
+  - scheduler: warmup_cosine_sam.yaml
 
 ds_ce_loss: 
   _target_: monai.losses.DeepSupervisionLoss
@@ -17,7 +17,7 @@ ds_dice_loss:
     to_onehot_y: True
     sigmoid: False
     softmax: True
-    include_background: True
+    include_background: False
     squared_pred: False
     smooth_nr: 0.00001
     smooth_dr: 0.00001
@@ -27,15 +27,18 @@ ds_focal_loss:
   loss: 
     _target_: monai.losses.FocalLoss
     to_onehot_y: True
-    include_background: True
+    include_background: False
 
 optimizer:
   _target_: torch.optim.AdamW
   _partial_: true
-  lr: 0.001 # 0.00002
+  lr: 0.00002
   weight_decay: 0.000001
 
 do_ds: True
+roi_size: [128, 128, 128]
+sw_batch_size: 1
+infer_overlap: 0.25
 
 # scheduler:
 #   _target_: torch.optim.lr_scheduler.CosineAnnealingLR

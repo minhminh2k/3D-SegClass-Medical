@@ -5,13 +5,6 @@ transforms:
     keys: ["image", "label"]
     ensure_channel_first: True
 
-  # - _target_: monai.transforms.RandSpatialCropSamplesd
-  #   keys: ["image", "label"]
-  #   roi_size: ${data.image_size_before_resized}
-  #   num_samples: ${data.samples}
-  #   random_center: True
-  #   random_size: False
-
   - _target_: monai.transforms.RandCropByPosNegLabeld
     keys: ["image", "label"]
     label_key: "label"
@@ -37,11 +30,6 @@ transforms:
     rotate_range: [0.1, 0.1, 0.1]
     scale_range: [0.02, 0.02, 0.02]
     mode: ["trilinear", "nearest"]
-
-  # - _target_: monai.transforms.Resized
-  #   keys: ["image", "label"]
-  #   spatial_size: ${data.image_size}
-  #   mode: ["trilinear", "nearest"]
   
   - _target_: monai.transforms.ToTensord
     keys: ["image", "label"]

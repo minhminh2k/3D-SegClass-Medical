@@ -3,7 +3,7 @@ _target_: src.models.losses.monai_losses.DiceLoss
 to_onehot_y: False
 sigmoid: True
 softmax: False
-include_background: True
+include_background: False
 squared_pred: False
 smooth_nr: 0.00001
 smooth_dr: 0.00001

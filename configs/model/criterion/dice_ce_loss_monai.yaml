@@ -1,9 +1,10 @@
 _target_: src.models.losses.monai_losses.DiceCELoss
 
-include_background: True
-sigmoid: True
-softmax: False
-squared_pred: True
+to_onehot_y: True
+include_background: False
+sigmoid: False
+softmax: True
+squared_pred: False
 smooth_nr: 0.00001
 smooth_dr: 0.00001
 lambda_dice: 1.0

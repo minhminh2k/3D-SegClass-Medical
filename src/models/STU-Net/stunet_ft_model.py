@@ -105,19 +105,28 @@ class STUNET_FT_Model(nn.Module):
         return self.mod
 
 if __name__ == '__main__':
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    
-    data = torch.rand((10, 1, 1, 128, 128, 128)).to(device)
-    
-    model = STUNET_FT_Model().to(device)
-    
-    # print(model.model)
-    # print(model.mod)
 
+    from monai.inferers import sliding_window_inference
+
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    device = 'cpu'
+    
+    data = torch.rand((1, 1, 256, 128, 128)).to(device)
+    
+    model = STUNET_FT_Model(
+        num_classes=2,
+        enable_deep_supervision=True
+    ).to(device)
+    
     # init lr: 1e-3
     # print(model.mod.state_dict()['conv_blocks_context.0.0.conv1.weight'])
     
-    for i in data:
-        print(i.shape)
-        output = model(i)
-        print(output.shape)
+    outputs = sliding_window_inference(data, (128, 128, 128), 1, model)
+
+    if isinstance(outputs, tuple):
+        for i in outputs:
+            print(i.shape) 
+
+    else:
+        print(outputs.shape) # 1, 1, 256, 128, 128
+

@@ -17,16 +17,9 @@ loss:
   to_onehot_y: True
   num_classes: ${model.num_classes}
   weight: 0.5
-  gamma: 0.5
+  gamma: 0.75
   delta: 0.7
   softmax: True
-
-  # _target_: src.models.losses.focal_tversky_3d.AsymmetricUnifiedFocalLoss
-  # to_onehot_y: False
-  # num_classes: 2
-  # weight: 0.5
-  # gamma: 0.5
-  # delta: 0.7
   
   # _target_: src.models.losses.focal_tversky_3d.FocalTverskyLoss
   # alpha: 0.7

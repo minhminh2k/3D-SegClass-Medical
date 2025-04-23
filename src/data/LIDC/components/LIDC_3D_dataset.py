@@ -31,7 +31,7 @@ class LIDC_IDRI_3D_Dataset(Dataset):
         nodule_clean_divide: bool = True,
         image_size_before_resized: tuple = (128, 128, 128),
         image_size: tuple = (128, 128, 128),
-        samples: int = 2,
+        samples: int = 1,
     ) -> None:
         """
         Args:
@@ -182,23 +182,6 @@ class LIDC_IDRI_3D_Dataset(Dataset):
         except:
             logging.error("Error when using RandCropByPosNegLabeld -> Using RandSpatialCropSamplesd")
             transform_item = transform_base(data_i)
-
-        def contains_zero_dim(result):
-            for key in ["image", "label"]:
-                tensor = result.get(key)
-                if isinstance(tensor, torch.Tensor) and tensor.ndim == 0:
-                    return True
-            return False
-        
-        if len(transform_item) == 0:
-            logging.error("Length of the item is 0")
-            return transform_base(data_i)
-        else:
-            for item in transform_item:
-                if contains_zero_dim(item):
-                    logging.error("0-d tensor in transform item.")
-                    return transform_base(data_i)
-        
         return transform_item
         
         

@@ -22,7 +22,7 @@ logging.basicConfig(
     datefmt="%Y-%m-%d %H:%M:%S"
 )
 
-class LIDC_Module_DS_Softmax(LightningModule):
+class LIDC_Module_Softmax(LightningModule):
     """Example of a `LightningModule` for LIDC 3D.
 
     A `LightningModule` implements 8 key methods:
@@ -61,9 +61,9 @@ class LIDC_Module_DS_Softmax(LightningModule):
         optimizer: torch.optim.Optimizer,
         scheduler: torch.optim.lr_scheduler,
         criterion: torch.nn.Module,
-        ds_dice_loss: torch.nn.Module,
-        ds_ce_loss: torch.nn.Module,
-        ds_focal_loss: torch.nn.Module,
+        dice_loss: torch.nn.Module,
+        ce_loss: torch.nn.Module,
+        focal_loss: torch.nn.Module,
         compile: bool,
         roi_size: Tuple[int, int, int] = [128, 128, 128],
         sw_batch_size: int = 1,
@@ -87,9 +87,9 @@ class LIDC_Module_DS_Softmax(LightningModule):
 
         # loss function
         self.criterion = criterion
-        self.ce_loss = ds_ce_loss
-        self.dice_loss = ds_dice_loss
-        self.focal_loss = ds_focal_loss
+        self.ce_loss = ce_loss
+        self.dice_loss = dice_loss
+        self.focal_loss = focal_loss
         
         # Post processing each class
         self.post_label = AsDiscrete(to_onehot=self.hparams.num_classes)
@@ -159,7 +159,7 @@ class LIDC_Module_DS_Softmax(LightningModule):
         self.val_hd_best.reset()
 
     def model_step(
-        self, batch: Any, process = Literal["train", "validation", "test"]
+        self, batch: Any
     ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """Perform a single model step on a batch of data.
 
@@ -173,31 +173,14 @@ class LIDC_Module_DS_Softmax(LightningModule):
         # B C H W D
         image, target = batch["image"], batch["label"]
 
-        if process == "train":
-            logits = self.forward(image)
-            
-            loss = self.criterion(logits, target)
-            ce_loss = self.ce_loss(logits, target)
-            dice_loss = self.dice_loss(logits, target)
-            focal_loss = self.focal_loss(logits, target)
-                    
-            return loss, ce_loss, dice_loss, focal_loss, logits[0], target
-        else:
-            logits = sliding_window_inference(
-                inputs=image, 
-                roi_size=self.hparams.roi_size, 
-                sw_batch_size=self.hparams.sw_batch_size, 
-                predictor=self.net,
-                overlap=self.hparams.infer_overlap
-            )
-            
-            loss = self.criterion(logits, target)
-            ce_loss = self.ce_loss(logits, target)
-            dice_loss = self.dice_loss(logits, target)
-            focal_loss = self.focal_loss(logits, target)
-                    
-            return loss, ce_loss, dice_loss, focal_loss, logits[0], target
-
+        logits = self.forward(image)
+        
+        loss = self.criterion(logits, target)
+        ce_loss = self.ce_loss(logits, target)
+        dice_loss = self.dice_loss(logits, target)
+        focal_loss = self.focal_loss(logits, target)
+                
+        return loss, ce_loss, dice_loss, focal_loss, logits, target
 
     def training_step(
         self, batch: Tuple[torch.Tensor, torch.Tensor], batch_idx: int
@@ -209,7 +192,7 @@ class LIDC_Module_DS_Softmax(LightningModule):
         :param batch_idx: The index of the current batch.
         :return: A tensor of losses between model predictions and targets.
         """
-        loss, ce_loss, dice_loss, focal_loss, pred_masks, gt_masks = self.model_step(batch, process="train")
+        loss, ce_loss, dice_loss, focal_loss, pred_masks, gt_masks = self.model_step(batch)
             
         labels_list = decollate_batch(gt_masks)
         labels_convert = [self.post_label(label_tensor) for label_tensor in labels_list]
@@ -257,7 +240,7 @@ class LIDC_Module_DS_Softmax(LightningModule):
             labels.
         :param batch_idx: The index of the current batch.
         """
-        loss, ce_loss, dice_loss, focal_loss, pred_masks, labels = self.model_step(batch, process="validation")
+        loss, ce_loss, dice_loss, focal_loss, pred_masks, labels = self.model_step(batch)
 
         labels_list = decollate_batch(labels)
         labels_convert = [self.post_label(label_tensor) for label_tensor in labels_list]
@@ -310,7 +293,7 @@ class LIDC_Module_DS_Softmax(LightningModule):
             labels.
         :param batch_idx: The index of the current batch.
         """
-        loss, ce_loss, dice_loss, focal_loss, pred_masks, labels = self.model_step(batch, process="test")
+        loss, ce_loss, dice_loss, focal_loss, pred_masks, labels = self.model_step(batch)
                 
         labels_list = decollate_batch(labels)
         labels_convert = [self.post_label(label_tensor) for label_tensor in labels_list]
@@ -388,29 +371,3 @@ class LIDC_Module_DS_Softmax(LightningModule):
                 },
             }
         return {"optimizer": optimizer}
-
-
-if __name__ == "__main__":
-    import hydra
-    import rootutils
-    from omegaconf import DictConfig, OmegaConf
-
-    # find paths
-    rootutils.setup_root(__file__, indicator=".project-root", pythonpath=True)
-    path = rootutils.find_root(search_from=__file__, indicator=".project-root")
-
-    config_path = str(path / "configs")
-    print(f"project-root: {path}")
-    print(f"config path: {config_path}")
-
-    @hydra.main(version_base="1.3", config_path=config_path, config_name="train.yaml")
-    def main(cfg: DictConfig):
-        print(f"config: \n {OmegaConf.to_yaml(cfg.model, resolve=True)}")
-
-        model = hydra.utils.instantiate(cfg.model)
-        batch = torch.rand(1, 3, 1024, 1024)
-        output = model(batch)
-
-        print(f"output shape: {output.shape}")
-
-    main()

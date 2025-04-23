@@ -88,10 +88,10 @@ class LovaszLoss(nn.Module):
 
     def forward(self, logit, labels):
         if isinstance(logit, MetaTensor):
-            logit_torch = logit.as_tensor()
+            logit = logit.as_tensor()
         if isinstance(labels, MetaTensor):
-            labels_torch = labels.as_tensor()
-        return lovasz_hinge(logit_torch, labels_torch)
+            labels = labels.as_tensor()
+        return lovasz_hinge(logit, labels)
 
 
 class BCE_Lovasz(nn.Module):
@@ -177,11 +177,11 @@ class LovaszSoftmax(nn.Module):
 
 
 if __name__ == "__main__":
-    x1 = torch.rand((2, 1, 128, 128, 128))
-    y1 =  torch.rand((2, 1, 128, 128, 128)) 
-    lovasz = LovaszLoss()
+    x1 = torch.rand((1, 5, 128, 128, 128))
+    y1 =  torch.rand((1, 1, 128, 128, 128)) 
+    # lovasz = LovaszLoss()
     lovasz_v2 = LovaszSoftmax()
     
-    print(lovasz(x1, y1))
+    # print(lovasz(x1, y1))
     print(lovasz_v2(x1, y1))
     
