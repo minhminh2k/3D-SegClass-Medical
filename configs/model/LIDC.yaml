@@ -1,7 +1,7 @@
 _target_: src.models.LIDC_module.LIDC_Module
 defaults:
-  - criterion: lovasz_softmax.yaml
-  - net: unetrpp.yaml
+  - criterion: ce_loss.yaml
+  - net: unet3d.yaml
   - scheduler: warmup_cosine.yaml
 
 ce_loss: 
