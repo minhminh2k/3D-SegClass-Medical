@@ -169,6 +169,10 @@ class LovaszSoftmax(nn.Module):
         return loss
 
     def forward(self, inputs, targets):
+        if isinstance(inputs, MetaTensor):
+            inputs = inputs.as_tensor()
+        if isinstance(targets, MetaTensor):
+            targets = targets.as_tensor()
         # print(inputs.shape, targets.shape) # (batch size, class_num, x,y,z), (batch size, 1, x,y,z)
         inputs, targets = self.prob_flatten(inputs, targets)
         # print(inputs.shape, targets.shape)

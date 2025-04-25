@@ -13,7 +13,7 @@ wandb_callback:
   num_classes: ${model.num_classes}
   softmax: True # If output is 2 channels
   do_ds: ${model.do_ds}
-  coefficient: 8
+  coefficient: 5
   case_names:
     [
       "0481",

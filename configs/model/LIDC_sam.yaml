@@ -1,8 +1,20 @@
 _target_: src.models.LIDC_module.LIDC_Module
 defaults:
-  - criterion: dice_ce_loss_monai.yaml
-  - net: nnsam.yaml
+  # - criterion: dice_ce_loss_monai.yaml
+  - net: sam3d.yaml
   - scheduler: warmup_cosine_sam.yaml
+
+criterion:
+  _target_: src.models.losses.monai_losses.DiceCELoss
+  to_onehot_y: False
+  include_background: True
+  sigmoid: True
+  softmax: False
+  squared_pred: False
+  smooth_nr: 0.00001
+  smooth_dr: 0.00001
+  lambda_dice: 1.0
+  lambda_ce: 0.5
 
 ce_loss: 
   _target_: src.models.losses.monai_losses.CELoss

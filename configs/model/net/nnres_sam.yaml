@@ -1,0 +1,19 @@
+_target_: src.models.nnUnet.nnUnetRes_SAM.SAMMed3D_nnUnetRes
+
+sam_image_encoder_ckpt: "/home/duong.quang.minh/project/3D-SegClass-Medical/checkpoints/sammed3d/sam_med3d_turbo_image_encoder.pth"
+input_channels: 1
+num_classes: 2
+n_stages: 6
+features_per_stage: [32, 64, 128, 256, 512, 768]
+n_blocks_per_stage: [2, 2, 2, 2, 2, 2]
+kernel_sizes: 3
+strides: [1, 2, 2, 2, 2, 2]
+n_conv_per_stage: [2, 2, 2, 2, 2, 2]
+n_conv_per_stage_decoder: [2, 2, 2, 2, 2]
+conv_bias: False
+deep_supervision: ${model.do_ds}
+nonlin_first: False
+pretrained: True
+trainable_encoder: True
+residual_encoder: True
+residual_decoder: True

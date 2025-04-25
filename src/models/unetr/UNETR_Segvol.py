@@ -246,10 +246,10 @@ if __name__ == '__main__':
     import torch
     import numpy as np
     
-    data = torch.rand(1, 1, 16, 128, 128).to("cuda")
+    data = torch.rand(1, 1, 128, 128, 128).to("cuda")
     
     model = Pretrained_SegVol_UNETR(
-        img_size=(16, 128, 128),
+        img_size=(128, 128, 128),
         patch_size=[4, 16, 16]
     ).to("cuda")
     

@@ -1,9 +1,9 @@
 _target_: src.models.losses.monai_losses.DiceCELoss
 
-to_onehot_y: True
+to_onehot_y: False
 include_background: False
-sigmoid: False
-softmax: True
+sigmoid: True
+softmax: False
 squared_pred: False
 smooth_nr: 0.00001
 smooth_dr: 0.00001

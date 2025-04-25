@@ -14,17 +14,14 @@ loss:
   # lambda_ce: 1.0
 
   _target_: src.models.losses.focal_tversky_3d.AsymmetricUnifiedFocalLoss
+
   to_onehot_y: True
   num_classes: ${model.num_classes}
-  weight: 0.5
-  gamma: 0.75
-  delta: 0.7
+  weight: 0.3 # focal / 1 - weight * tver
+  gamma: 1.0
+  delta: 0.8 # fore ce / fn
   softmax: True
   
-  # _target_: src.models.losses.focal_tversky_3d.FocalTverskyLoss
-  # alpha: 0.7
-  # beta: 0.3
-  # gamma: 0.75
 
 weight_mode: "exp"
 # weights: [1, 0.5, 0.25, 0.125, 0.1]

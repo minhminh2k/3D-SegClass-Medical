@@ -2,7 +2,7 @@ _target_: src.models.losses.focal_tversky_3d.AsymmetricUnifiedFocalLoss
 
 to_onehot_y: True
 num_classes: ${model.num_classes}
-weight: 0.5
-gamma: 0.75
-delta: 0.7
+weight: 0.2 # focal / 1 - weight * tver
+gamma: 1.25
+delta: 0.8 # back ce / fn
 softmax: True

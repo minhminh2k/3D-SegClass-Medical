@@ -1,6 +1,6 @@
 _target_: src.models.LIDC_module_softmax.LIDC_Module_DS_Softmax
 defaults:
-  - criterion: asymm_focal.yaml
+  - criterion: ds_loss_softmax.yaml
   - net: stunet_ft.yaml
   - scheduler: warmup_cosine_sam.yaml
 
@@ -32,7 +32,7 @@ ds_focal_loss:
 optimizer:
   _target_: torch.optim.AdamW
   _partial_: true
-  lr: 0.00002
+  lr: 0.00005
   weight_decay: 0.000001
 
 do_ds: True
