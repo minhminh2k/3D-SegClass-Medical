@@ -7,12 +7,16 @@ Implementation from https://github.com/bermanmaxim/LovaszSoftmax/
 
 """
 
+import warnings
 import numpy as np
 import torch
 import torch.nn.functional as F
 from torch import nn
 from torch.nn import BCEWithLogitsLoss
 from monai.data import MetaTensor
+from collections.abc import Callable, Sequence
+from monai.utils import DiceCEReduction, LossReduction, Weight, look_up_option, pytorch_after
+from monai.networks import one_hot
 
 # from torch.autograd import Function
 
@@ -129,62 +133,127 @@ class StableBCELoss(torch.nn.modules.Module):
 
 
 class LovaszSoftmax(nn.Module):
-    def __init__(self, reduction='mean'):
+    def __init__(
+        self, 
+        reduction: LossReduction | str = LossReduction.MEAN,
+        include_background: bool = False,
+        to_onehot_y: bool = True,
+        softmax: bool = True,
+        num_classes: int = 2,
+        sigmoid: bool = False,
+        epsilon: float = 1e-7
+    ):
         super(LovaszSoftmax, self).__init__()
         self.reduction = reduction
+        self.to_onehot_y = to_onehot_y
+        self.softmax = softmax
+        self.num_classes = num_classes
+        self.include_background = include_background
+        self.sigmoid = sigmoid
+        self.epsilon = epsilon
 
-    def prob_flatten(self, input, target):
-        assert input.dim() in [4, 5]
-        num_class = input.size(1)
-        if input.dim() == 4:
-            input = input.permute(0, 2, 3, 1).contiguous()
-            input_flatten = input.view(-1, num_class)
-        elif input.dim() == 5:
-            input = input.permute(0, 2, 3, 4, 1).contiguous()
-            input_flatten = input.view(-1, num_class)
-        target_flatten = target.view(-1)
-        return input_flatten, target_flatten
+    def prob_flatten(self, y_pred: torch.Tensor, y_true: torch.Tensor):
+        assert y_pred.dim() in [4, 5]
+        num_class = y_pred.size(1)
+        
+        assert y_pred.size(1) == y_true.size(1)
+        
+        if y_pred.dim() == 4:
+            y_pred = y_pred.permute(0, 2, 3, 1).contiguous()
+            y_pred_flatten = y_pred.view(-1, num_class)
+            
+            y_true = y_true.permute(0, 2, 3, 1).contiguous()
+            y_true_flatten = y_true.view(-1, num_class)
+        elif y_pred.dim() == 5:
+            y_pred = y_pred.permute(0, 2, 3, 4, 1).contiguous()
+            y_pred_flatten = y_pred.view(-1, num_class)
+            
+            y_true = y_true.permute(0, 2, 3, 4, 1).contiguous()
+            y_true_flatten = y_true.view(-1, num_class)
+            
+        # y_true_flatten = y_true.view(-1)
+        return y_pred_flatten, y_true_flatten
 
-    def lovasz_softmax_flat(self, inputs, targets):
-        num_classes = inputs.size(1)
+    def lovasz_softmax_flat(self, y_pred: torch.Tensor, y_true: torch.Tensor):
+        num_classes = y_pred.size(1)
+        assert y_pred.size(1) == y_true.size(1)
+
         losses = []
+        
         for c in range(num_classes):
-            target_c = (targets == c).float()
-            if num_classes == 1:
-                input_c = inputs[:, 0]
-            else:
-                input_c = inputs[:, c]
+            target_c = y_true[:, c].float()
+            input_c = y_pred[:, c]
+            
             loss_c = (torch.autograd.Variable(target_c) - input_c).abs()
             loss_c_sorted, loss_index = torch.sort(loss_c, 0, descending=True)
             target_c_sorted = target_c[loss_index]
             losses.append(torch.dot(loss_c_sorted, torch.autograd.Variable(lovasz_grad(target_c_sorted))))
         losses = torch.stack(losses)
-
-        if self.reduction == 'none':
-            loss = losses
-        elif self.reduction == 'sum':
-            loss = losses.sum()
+                
+        if self.reduction == LossReduction.MEAN.value:
+            loss = torch.mean(losses)
+        elif self.reduction == LossReduction.SUM.value:
+            loss = torch.sum(losses)
         else:
-            loss = losses.mean()
+            loss = torch.mean(losses)
         return loss
 
-    def forward(self, inputs, targets):
-        if isinstance(inputs, MetaTensor):
-            inputs = inputs.as_tensor()
-        if isinstance(targets, MetaTensor):
-            targets = targets.as_tensor()
-        # print(inputs.shape, targets.shape) # (batch size, class_num, x,y,z), (batch size, 1, x,y,z)
-        inputs, targets = self.prob_flatten(inputs, targets)
-        # print(inputs.shape, targets.shape)
-        losses = self.lovasz_softmax_flat(inputs, targets)
+    def forward(self, y_pred: torch.Tensor, y_true: torch.Tensor):
+        if len(y_pred.shape) != 4 and len(y_pred.shape) != 5:
+            raise ValueError(f"input shape must be 4 or 5, but got {y_pred.shape}")
+        
+        if self.sigmoid:
+            y_pred = torch.sigmoid(y_pred)
+            y_pred = torch.clamp(y_pred, self.epsilon, 1.0 - self.epsilon)
+        
+        n_pred_ch = y_pred.shape[1]
+        
+        if self.softmax:
+            if n_pred_ch == 1:
+                raise ValueError("single channel prediction, `softmax=True` ignored.")
+            else:
+                y_pred = torch.softmax(y_pred, 1)
+
+        if self.to_onehot_y:
+            if n_pred_ch == 1:
+                raise ValueError("single channel prediction, `to_onehot_y=True` ignored.")
+            else:
+                y_true = one_hot(y_true, num_classes=n_pred_ch)
+                
+        if not self.include_background:
+            if n_pred_ch == 1:
+                warnings.warn("single channel prediction, `include_background=False` ignored.")
+            else:
+                # if skipping background, removing first channel
+                y_true = y_true[:, 1:]
+                y_pred = y_pred[:, 1:]
+                
+        if isinstance(y_pred, MetaTensor):
+            y_pred = y_pred.as_tensor()
+        if isinstance(y_true, MetaTensor):
+            y_true = y_true.as_tensor()
+        
+        # print(y_pred.shape, y_true.shape) # (batch size, class_num, x,y,z), (batch size, 1, x,y,z)
+        y_pred, y_true = self.prob_flatten(y_pred, y_true)
+        # print(y_pred.shape, y_true.shape)
+        losses = self.lovasz_softmax_flat(y_pred, y_true)
         return losses
 
 
 if __name__ == "__main__":
-    x1 = torch.rand((1, 5, 128, 128, 128))
-    y1 =  torch.rand((1, 1, 128, 128, 128)) 
-    # lovasz = LovaszLoss()
-    lovasz_v2 = LovaszSoftmax()
+    ch0 = torch.zeros((1, 1, 128, 128, 128))
+
+    ch1 = torch.ones((1, 1, 128, 128, 128))
+
+    x1 = torch.cat([ch0, ch1], dim=1)
+    y1 = torch.randint(0, 1, (1, 1, 128, 128, 128))
+
+    lovasz_v2 = LovaszSoftmax(
+        to_onehot_y=True,
+        softmax=True,
+        num_classes=2,
+        include_background=False
+    )
     
     # print(lovasz(x1, y1))
     print(lovasz_v2(x1, y1))
