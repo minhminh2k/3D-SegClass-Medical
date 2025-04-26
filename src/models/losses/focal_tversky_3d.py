@@ -1,6 +1,5 @@
 import torch
 import torch.nn as nn
-from monai.losses import AsymmetricUnifiedFocalLoss
 from monai.utils import LossReduction
 from monai.networks import one_hot
 import logging
@@ -127,7 +126,7 @@ class SymmetricFocalLoss(nn.Module):
         back_ce = torch.pow(1 - y_pred[:, 0], self.gamma) * cross_entropy[:, 0]
         back_ce = (1 - self.delta) * back_ce
         
-        fore_ce = torch.pow(1 - cross_entropy[:, 1], self.gamma) * cross_entropy[:, 1]
+        fore_ce = torch.pow(1 - y_pred[:, 1], self.gamma) * cross_entropy[:, 1]
         fore_ce = self.delta * fore_ce
         
         loss = torch.mean(torch.sum(torch.stack([back_ce, fore_ce], dim=1), dim=1))    
@@ -209,13 +208,17 @@ class AsymmetricFocalLoss(nn.Module):
         gamma: float = 0.75,
         epsilon: float = 1e-7,
         reduction: LossReduction | str = LossReduction.MEAN,
+        include_background: bool = False,
+        sigmoid: bool = False
     ):
         super().__init__()
         self.delta = delta
         self.gamma = gamma
         self.epsilon = epsilon
         self.reduction = reduction
-
+        self.include_background = include_background
+        self.sigmoid = sigmoid
+        
     def forward(self, y_pred: torch.Tensor, y_true: torch.Tensor) -> torch.Tensor:
         # Ensure the predictions are in the same dimension as y_true
         y_pred = torch.clamp(y_pred, self.epsilon, 1.0 - self.epsilon)
@@ -223,14 +226,22 @@ class AsymmetricFocalLoss(nn.Module):
         
         cross_entropy = -y_true * torch.log(y_pred)
         
-        back_ce = torch.pow(1 - y_pred[:, 0], self.gamma) * cross_entropy[:, 0]
-        back_ce = (1 - self.delta) * back_ce
-        
-        fore_ce = cross_entropy[:, 1]
-        fore_ce = self.delta * fore_ce
+        if self.sigmoid:
+            fore_ce = torch.pow(1 - y_pred[:, 0], -self.gamma) * cross_entropy[:, 0]
+            return torch.mean(fore_ce)
+        else:
+            if self.include_background:      
+                back_ce = torch.pow(1 - y_pred[:, 0], self.gamma) * cross_entropy[:, 0]
+                back_ce = (1 - self.delta) * back_ce
+                
+                fore_ce = cross_entropy[:, 1]
+                fore_ce = self.delta * fore_ce
 
-        loss = torch.mean(torch.sum(torch.stack([back_ce, fore_ce], dim=1), dim=1))
-        return loss
+                loss = torch.mean(torch.sum(torch.stack([back_ce, fore_ce], dim=1), dim=1))
+                return loss
+            else:
+                fore_ce = torch.pow(1 - y_pred[:, 1], -self.gamma) * cross_entropy[:, 1]
+                return torch.mean(fore_ce)
     
 #################################
 # Asymmetric Focal Tversky loss #
@@ -252,12 +263,16 @@ class AsymmetricFocalTverskyLoss(nn.Module):
         gamma: float = 0.75,
         epsilon: float = 1e-7,
         reduction: LossReduction | str = LossReduction.MEAN,
+        include_background: bool = False,
+        sigmoid: bool = False,
     ):
         super().__init__()
         self.delta = delta
         self.gamma = gamma
         self.epsilon = epsilon
         self.reduction = reduction
+        self.sigmoid = sigmoid
+        self.include_background = include_background
 
     def forward(self, y_pred: torch.Tensor, y_true: torch.Tensor) -> torch.Tensor:
         # Ensure the predictions are in the same dimension as y_true
@@ -270,13 +285,21 @@ class AsymmetricFocalTverskyLoss(nn.Module):
         fp = torch.sum((1 - y_true) * y_pred, dim=axis)
         dice_class = (tp + self.epsilon) / (tp + self.delta * fn + (1 - self.delta) * fp + self.epsilon)
         
+        if self.sigmoid:
+            fore_dice = (1 - dice_class[:, 0]) * torch.pow(1 - dice_class[:, 0], -self.gamma)
+            return torch.mean(fore_dice)
+        
         # Calculate losses separately for each class, enhancing both classes
         back_dice = 1 - dice_class[:, 0]
         fore_dice = (1 - dice_class[:, 1]) * torch.pow(1 - dice_class[:, 1], -self.gamma)
-
-        # Average class scores
-        loss = torch.mean(torch.stack([back_dice, fore_dice], dim=-1))
-        return loss
+        
+        if self.include_background:
+            # Average class scores
+            loss = torch.mean(torch.stack([back_dice, fore_dice], dim=-1))
+            return loss
+        else:
+            loss = torch.mean(fore_dice)
+            return loss
     
 ###########################################
 #      Symmetric Unified Focal loss       #
@@ -376,11 +399,15 @@ class AsymmetricUnifiedFocalLoss(nn.Module):
         self,
         to_onehot_y: bool = True,
         num_classes: int = 2,
-        weight: float = 0.5,
+        lambda_focal: float = 0.3,
+        lambda_dice: float = 0.7,
         gamma: float = 0.5,
         delta: float = 0.7,
         softmax: bool = True,
         reduction: LossReduction | str = LossReduction.MEAN,
+        include_background: bool = False,
+        epsilon: float = 1e-7,
+        sigmoid: bool = True
     ):
         """
         Args:
@@ -404,11 +431,15 @@ class AsymmetricUnifiedFocalLoss(nn.Module):
         self.num_classes = num_classes
         self.gamma = gamma
         self.delta = delta
-        self.weight: float = weight
+        self.lambda_dice = lambda_dice
+        self.lambda_focal = lambda_focal
         self.reduction = reduction
         self.softmax = softmax
-        self.asy_focal_loss = AsymmetricFocalLoss(gamma=self.gamma, delta=self.delta)
-        self.asy_focal_tversky_loss = AsymmetricFocalTverskyLoss(gamma=self.gamma, delta=self.delta)
+        self.epsilon = epsilon
+        self.include_background = include_background
+        self.sigmoid = sigmoid
+        self.asy_focal_loss = AsymmetricFocalLoss(gamma=self.gamma, delta=self.delta, epsilon=epsilon, reduction=reduction, include_background=include_background, sigmoid=sigmoid)
+        self.asy_focal_tversky_loss = AsymmetricFocalTverskyLoss(gamma=self.gamma, delta=self.delta, epsilon=epsilon, reduction=reduction, include_background=include_background, sigmoid=sigmoid)
 
     # TODO: Implement this  function to support multiple classes segmentation
     def forward(self, y_pred: torch.Tensor, y_true: torch.Tensor) -> torch.Tensor:
@@ -431,6 +462,9 @@ class AsymmetricUnifiedFocalLoss(nn.Module):
         if len(y_pred.shape) != 4 and len(y_pred.shape) != 5:
             raise ValueError(f"input shape must be 4 or 5, but got {y_pred.shape}")
         
+        if self.sigmoid:
+            y_pred = torch.sigmoid(y_pred)
+        
         n_pred_ch = y_pred.shape[1]
         
         if self.softmax:
@@ -448,7 +482,7 @@ class AsymmetricUnifiedFocalLoss(nn.Module):
         asy_focal_loss = self.asy_focal_loss(y_pred, y_true)
         asy_focal_tversky_loss = self.asy_focal_tversky_loss(y_pred, y_true)
 
-        loss: torch.Tensor = self.weight * asy_focal_loss + (1 - self.weight) * asy_focal_tversky_loss
+        loss: torch.Tensor = self.lambda_focal * asy_focal_loss + self.lambda_dice * asy_focal_tversky_loss
 
         if self.reduction == LossReduction.SUM.value:
             return torch.sum(loss)  # sum over the batch and channel dims
@@ -457,3 +491,8 @@ class AsymmetricUnifiedFocalLoss(nn.Module):
         if self.reduction == LossReduction.MEAN.value:
             return torch.mean(loss)
         raise ValueError(f'Unsupported reduction: {self.reduction}, available options are ["mean", "sum", "none"].')
+    
+if __name__ == "__main__":
+    loss = AsymmetricUnifiedFocalLoss()
+    
+    

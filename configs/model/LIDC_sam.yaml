@@ -1,24 +1,28 @@
 _target_: src.models.LIDC_module.LIDC_Module
 defaults:
-  # - criterion: dice_ce_loss_monai.yaml
-  - net: sam3d.yaml
+  - criterion: combine_loss.yaml
+  - net: stunet_ft.yaml
   - scheduler: warmup_cosine_sam.yaml
 
-criterion:
-  _target_: src.models.losses.monai_losses.DiceCELoss
-  to_onehot_y: False
-  include_background: True
-  sigmoid: True
-  softmax: False
-  squared_pred: False
-  smooth_nr: 0.00001
-  smooth_dr: 0.00001
-  lambda_dice: 1.0
-  lambda_ce: 0.5
+# criterion:
+#   _target_: src.models.losses.monai_losses.DiceCELoss
+#   to_onehot_y: False
+#   include_background: True
+#   sigmoid: True
+#   softmax: False
+#   squared_pred: False
+#   smooth_nr: 0.00001
+#   smooth_dr: 0.00001
+#   lambda_dice: 1.0
+#   lambda_ce: 0.5
 
 ce_loss: 
-  _target_: src.models.losses.monai_losses.CELoss
-  reduction: mean
+  # _target_: src.models.losses.monai_losses.CELoss
+  # reduction: mean
+  _target_: monai.losses.HausdorffDTLoss
+  include_background: False
+  sigmoid: True
+  reduction: "mean"
 
 dice_loss: 
   _target_: src.models.losses.monai_losses.DiceLoss
@@ -42,11 +46,6 @@ optimizer:
   weight_decay: 0.000001
 
 do_ds: False
-
-# scheduler:
-#   _target_: torch.optim.lr_scheduler.CosineAnnealingLR
-#   _partial_: true
-#   T_max: ${trainer.max_epochs}
   
 # compile model for faster training with pytorch 2.0
 compile: false

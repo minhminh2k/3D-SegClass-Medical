@@ -1,0 +1,11 @@
+_target_: monai.losses.GeneralizedDiceFocalLoss
+
+include_background: False
+sigmoid: True
+to_onehot_y: False
+softmax: False
+smooth_nr: 0.00001
+smooth_dr: 0.00001
+lambda_gdl: 1.0
+lambda_focal: 1.0
+reduction: "mean"

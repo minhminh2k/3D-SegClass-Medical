@@ -1,0 +1,16 @@
+_target_: src.models.losses.combine_loss.CombineLoss
+
+loss_type: "gdl_focal"
+sigmoid: True
+to_onehot_y: False
+num_classes: ${model.num_classes}
+gamma: 1.25
+delta: 0.7 # back ce / fn
+softmax: False
+reduction: "mean"
+include_background: False
+epsilon: 1e-7
+lambda_dice: 1.0
+lambda_focal: 1.0
+lambda_lovasz: 1.0
+lambda_hd: 5.0

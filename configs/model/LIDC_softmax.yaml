@@ -1,7 +1,7 @@
 _target_: src.models.LIDC_softmax.LIDC_Module_Softmax
 defaults:
-  - criterion: asymm_focal.yaml
-  - net: nnres_sam.yaml
+  - criterion: combine_loss.yaml
+  - net: stunet_ft.yaml
   - scheduler: warmup_cosine_sam.yaml
 
 ce_loss: 

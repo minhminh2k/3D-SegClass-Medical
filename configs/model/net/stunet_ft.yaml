@@ -1,7 +1,7 @@
 _target_: src.models.STU-Net.stunet_ft_model.STUNET_FT_Model
 
 input_channels: 1
-num_classes: 2
+num_classes: 1
 model_type: "base"
 enable_deep_supervision: ${model.do_ds}
 pretrained_weights_base: "/home/duong.quang.minh/project/3D-SegClass-Medical/checkpoints/stunet/base_ep4k.model"

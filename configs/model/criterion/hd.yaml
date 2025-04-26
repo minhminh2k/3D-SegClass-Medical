@@ -1,0 +1,7 @@
+_target_: monai.losses.HausdorffDTLoss
+
+include_background: False
+sigmoid: True
+to_onehot_y: False
+softmax: False
+reduction: "sum"
