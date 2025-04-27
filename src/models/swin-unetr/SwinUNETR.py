@@ -80,6 +80,7 @@ class SwinUNETR(nn.Module):
         spatial_dims: int = 3,
         downsample: str | nn.Module = "merging",
         use_v2: bool = False,
+        pretrained_weight: None | str = "/home/duong.quang.minh/project/3D-SegClass-Medical/checkpoints/model_swinvit.pt"
     ) -> None:
         """
         Args:
@@ -270,7 +271,29 @@ class SwinUNETR(nn.Module):
         )
 
         self.out = UnetOutBlock(spatial_dims=spatial_dims, in_channels=feature_size, out_channels=out_channels)
+        
+        if pretrained_weight:
+            self._load_weights(pretrained_weight)
 
+    def _load_weights(self, pretrained_weight: str):
+        print("Loading pretrained weights")
+        model_dict = torch.load(pretrained_weight)
+        state_dict = model_dict["state_dict"]
+        # fix potential differences in state dict keys from pre-training to
+        # fine-tuning
+        if "module." in list(state_dict.keys())[0]:
+            print("Tag 'module.' found in state dict - fixing!")
+            for key in list(state_dict.keys()):
+                state_dict[key.replace("module.", "")] = state_dict.pop(key)
+        if "swin_vit" in list(state_dict.keys())[0]:
+            print("Tag 'swin_vit' found in state dict - fixing!")
+            for key in list(state_dict.keys()):
+                state_dict[key.replace("swin_vit", "swinViT")] = state_dict.pop(key)
+        # We now load model weights, setting param `strict` to False, i.e.:
+        # this load the encoder weights (Swin-ViT, SSL pre-trained), but leaves
+        # the decoder weights untouched (CNN UNet decoder).
+        self.load_state_dict(state_dict, strict=False)
+    
     def load_from(self, weights):
         with torch.no_grad():
             self.swinViT.patch_embed.proj.weight.copy_(weights["state_dict"]["module.patch_embed.proj.weight"])
@@ -1147,15 +1170,14 @@ if __name__ == "__main__":
     input = torch.randint(
         low=0,
         high=255,
-        size=(1, 1, 64, 192, 192),
+        size=(1, 1, 128, 128, 128),
         dtype=torch.float,
     )
     model = SwinUNETR(
         in_channels=1,
         out_channels=1,
-        img_size=[64, 192, 192]
+        img_size=[128, 128, 128]
     )
     
     output = model(input)
-    print(output)
     print(output.shape) # torch.Size([batch, num_classes, 128, 128, 128])
