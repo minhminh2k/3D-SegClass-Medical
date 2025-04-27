@@ -8,24 +8,25 @@ import logging
 from .focal_tversky_3d import AsymmetricUnifiedFocalLoss
 from .lovasz_loss import LovaszSoftmax
 from .monai_losses import DiceCELoss, DiceLoss
-from monai.losses import GeneralizedDiceFocalLoss, HausdorffDTLoss
+from monai.losses import GeneralizedDiceFocalLoss, HausdorffDTLoss, FocalLoss
+from .focal_tversky_3d import FocalTverskyLoss
 
 class CombineLoss(nn.Module):
     def __init__(
         self,
         to_onehot_y: bool = True,
         num_classes: int = 2,
-        gamma: float = 1.25,
+        gamma: float = 0.75,
         delta: float = 0.8,
         softmax: bool = True,
         sigmoid: bool = False,
         reduction: LossReduction | str = LossReduction.MEAN,
         include_background: bool = False,
         epsilon: float = 1e-7,
-        loss_type: Literal["gdl_focal", "asymm_focal", "dicece"] = "dicece",
-        lambda_dice: float = 0.7,
-        lambda_focal: float = 0.3,
-        lambda_lovasz: float = 0.5,
+        loss_type: Literal["gdl_focal", "tversky", "dicece"] = "dicece",
+        lambda_dice: float = 1.0,
+        lambda_focal: float = 1.0,
+        lambda_lovasz: float = 1.0,
         lambda_hd: float = 5.0,
     ):
         """
@@ -59,20 +60,24 @@ class CombineLoss(nn.Module):
         self.sigmoid = sigmoid
         self.epsilon = epsilon
         
-        if loss_type == "asymm_focal":
-            self.dice_focal = AsymmetricUnifiedFocalLoss(
-                to_onehot_y=to_onehot_y,
-                num_classes=num_classes,
-                lambda_focal=lambda_focal,
-                lamdba_dice=lambda_dice,
-                gamma=gamma,
+        self.focal = None
+        
+        # Auto sigmoid
+        if loss_type == "tversky":
+            self.dice_focal = FocalTverskyLoss(
                 delta=delta,
-                softmax=softmax,
-                reduction=reduction,
-                include_background=include_background,
+                gamma=gamma,
                 epsilon=epsilon,
-                sigmoid=sigmoid
+                reduction=reduction
             )
+            
+            self.focal = FocalLoss(
+                include_background=include_background,
+                to_onehot_y=to_onehot_y,
+                reduction=reduction,
+                use_softmax=False
+            )
+            
         elif loss_type == "gdl_focal":
             self.dice_focal = GeneralizedDiceFocalLoss(
                 include_background=include_background,
@@ -114,10 +119,20 @@ class CombineLoss(nn.Module):
         )
         
     def forward(self, y_pred: torch.Tensor, y_true: torch.Tensor) -> torch.Tensor:
-        asymm_focal_loss = self.dice_focal(y_pred, y_true)
-        lovasz_loss = self.lovasz(y_pred, y_true)
-        hd_loss = self.hd(y_pred, y_true)
+        if not self.focal:
+            asymm_focal_loss = self.dice_focal(y_pred, y_true)
+            lovasz_loss = self.lovasz(y_pred, y_true)
+            hd_loss = self.hd(y_pred, y_true)
 
-        total_loss: torch.Tensor = asymm_focal_loss + self.lambda_lovasz * lovasz_loss + self.lambda_hd * hd_loss
+            total_loss: torch.Tensor = asymm_focal_loss + self.lambda_lovasz * lovasz_loss + self.lambda_hd * hd_loss
 
-        return total_loss
+            return total_loss
+        else:
+            tversky_loss = self.dice_focal(y_pred, y_true)
+            focal_loss = self.focal(y_pred, y_true)
+            lovasz_loss = self.lovasz(y_pred, y_true)
+            hd_loss = self.hd(y_pred, y_true)
+
+            total_loss: torch.Tensor = self.lambda_dice * tversky_loss + self.lambda_focal * focal_loss + self.lambda_lovasz * lovasz_loss + self.lambda_hd * hd_loss
+
+            return total_loss

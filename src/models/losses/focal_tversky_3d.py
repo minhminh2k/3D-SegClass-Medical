@@ -15,15 +15,13 @@ class FocalTverskyLoss(nn.Module):
     """
     def __init__(
         self, 
-        alpha: float = 0.7, 
-        beta: float = 0.3, 
+        delta: float = 0.7,
         gamma: float = 0.75, 
         epsilon: float = 1e-7,
         reduction: LossReduction | str = LossReduction.MEAN,
     ):
         super().__init__()
-        self.alpha = alpha
-        self.beta = beta
+        self.delta = delta
         self.gamma = gamma
         self.epsilon = epsilon
         self.reduction = reduction
@@ -42,7 +40,7 @@ class FocalTverskyLoss(nn.Module):
         fn = (y_true * (1 - y_pred)).sum(dim=axis)
         fp = ((1 - y_true) * y_pred).sum(dim=axis)
         
-        tversky_index = (tp + self.epsilon) / (tp + self.alpha * fn + self.beta * fp + self.epsilon)
+        tversky_index = (tp + self.epsilon) / (tp + self.delta * fn + (1 - self.delta) * fp + self.epsilon)
         
         # Calculate the Focal Tversky loss
         loss: torch.Tensor = (1 - tversky_index).pow(self.gamma)

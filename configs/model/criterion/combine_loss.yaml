@@ -1,10 +1,10 @@
 _target_: src.models.losses.combine_loss.CombineLoss
 
-loss_type: "gdl_focal"
+loss_type: "tversky"
 sigmoid: True
 to_onehot_y: False
 num_classes: ${model.num_classes}
-gamma: 1.25
+gamma: 0.75 # gamma only for tversky
 delta: 0.7 # back ce / fn
 softmax: False
 reduction: "mean"

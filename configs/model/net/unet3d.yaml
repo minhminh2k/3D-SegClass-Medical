@@ -1,6 +1,4 @@
-_target_: src.models.unet3d.model.UNet3D
+_target_: src.models.unet3d.unet3d.UNet3D
 
 in_channels: 1
-num_classes: 1
-level_channels: [64, 128, 256]
-bottleneck_channel: 512
+out_channels: 1
