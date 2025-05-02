@@ -180,3 +180,21 @@ class SAMMed3D_UNETR(nn.Module):
         dec1 = self.decoder3(dec2, enc2)        
         out = self.decoder2(dec1, enc1)        
         return self.out(out)
+    
+if __name__ == "__main__":
+    import torch 
+    input = torch.randint(
+        low=0,
+        high=255,
+        size=(1, 1, 128, 128, 128),
+        dtype=torch.float,
+    )
+    model = SAMMed3D_UNETR(
+        in_channels=1,
+        out_channels=1,
+        img_size=[128, 128, 128],
+        image_encoder_ckpt="/home/duong.quang.minh/project/3D-SegClass-Medical/checkpoints/sammed3d/sam_med3d_turbo_image_encoder.pth"
+    )
+    
+    output = model(input)
+    print("final", output.shape) # torch.Size([batch, num_classes, 128, 128, 128])

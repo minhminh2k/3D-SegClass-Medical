@@ -1,7 +1,7 @@
 _target_: src.models.LIDC_module.LIDC_Module
 defaults:
-  - criterion: combine_loss.yaml
-  - net: stunet_ft.yaml
+  - criterion: unified_loss.yaml
+  - net: sam3d.yaml
   - scheduler: warmup_cosine_sam.yaml
 
 # criterion:
@@ -17,12 +17,12 @@ defaults:
 #   lambda_ce: 0.5
 
 ce_loss: 
-  # _target_: src.models.losses.monai_losses.CELoss
-  # reduction: mean
-  _target_: monai.losses.HausdorffDTLoss
-  include_background: False
-  sigmoid: True
-  reduction: "mean"
+  _target_: src.models.losses.monai_losses.CELoss
+  reduction: mean
+  # _target_: monai.losses.HausdorffDTLoss
+  # include_background: False
+  # sigmoid: True
+  # reduction: "mean"
 
 dice_loss: 
   _target_: src.models.losses.monai_losses.DiceLoss

@@ -194,5 +194,7 @@ if __name__ == "__main__":
         dims=[32, 64, 128, 256],
         do_ds=False,
     )
-    output = model(input)
-    print(output.shape)
+    # output = model(input)
+    # print(output.shape)
+    
+    test = torch.jit.script(model)

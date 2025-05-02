@@ -17,17 +17,17 @@ class CombineLoss(nn.Module):
         to_onehot_y: bool = True,
         num_classes: int = 2,
         gamma: float = 0.75,
-        delta: float = 0.8,
+        delta: float = 0.7,
         softmax: bool = True,
         sigmoid: bool = False,
         reduction: LossReduction | str = LossReduction.MEAN,
         include_background: bool = False,
         epsilon: float = 1e-7,
-        loss_type: Literal["gdl_focal", "tversky", "dicece"] = "dicece",
+        loss_type: Literal["gdl_focal", "tversky", "dicece"] = "tversky",
         lambda_dice: float = 1.0,
         lambda_focal: float = 1.0,
         lambda_lovasz: float = 1.0,
-        lambda_hd: float = 5.0,
+        lambda_hd: float = 0.5,
     ):
         """
         Args:
@@ -100,15 +100,15 @@ class CombineLoss(nn.Module):
                 lambda_dice=lambda_dice
             )
 
-        self.lovasz = LovaszSoftmax(
-            include_background=include_background,
-            to_onehot_y=to_onehot_y,
-            softmax=softmax,
-            num_classes=num_classes,
-            sigmoid=sigmoid,
-            reduction=reduction,
-            epsilon=epsilon
-        )
+        # self.lovasz = LovaszSoftmax(
+        #     include_background=include_background,
+        #     to_onehot_y=to_onehot_y,
+        #     softmax=softmax,
+        #     num_classes=num_classes,
+        #     sigmoid=sigmoid,
+        #     reduction=reduction,
+        #     epsilon=epsilon
+        # )
         
         self.hd = HausdorffDTLoss(
             include_background=include_background,
@@ -121,18 +121,71 @@ class CombineLoss(nn.Module):
     def forward(self, y_pred: torch.Tensor, y_true: torch.Tensor) -> torch.Tensor:
         if not self.focal:
             asymm_focal_loss = self.dice_focal(y_pred, y_true)
-            lovasz_loss = self.lovasz(y_pred, y_true)
+            # lovasz_loss = self.lovasz(y_pred, y_true)
             hd_loss = self.hd(y_pred, y_true)
 
-            total_loss: torch.Tensor = asymm_focal_loss + self.lambda_lovasz * lovasz_loss + self.lambda_hd * hd_loss
+            total_loss: torch.Tensor = asymm_focal_loss + self.lambda_hd * hd_loss \
+                # + self.lambda_lovasz * lovasz_loss
 
             return total_loss
         else:
             tversky_loss = self.dice_focal(y_pred, y_true)
             focal_loss = self.focal(y_pred, y_true)
-            lovasz_loss = self.lovasz(y_pred, y_true)
+            # lovasz_loss = self.lovasz(y_pred, y_true)
             hd_loss = self.hd(y_pred, y_true)
 
-            total_loss: torch.Tensor = self.lambda_dice * tversky_loss + self.lambda_focal * focal_loss + self.lambda_lovasz * lovasz_loss + self.lambda_hd * hd_loss
+            total_loss: torch.Tensor = self.lambda_dice * tversky_loss + self.lambda_focal * focal_loss + self.lambda_hd * hd_loss \
+                # + self.lambda_lovasz * lovasz_loss
 
             return total_loss
+        
+class UnifiedFocalLoss(nn.Module):
+    def __init__(
+        self,
+        to_onehot_y: bool = False,
+        num_classes: int = 2,
+        gamma: float = 0.75,
+        delta: float = 0.7,
+        softmax: bool = False,
+        sigmoid: bool = True,
+        reduction: LossReduction | str = LossReduction.MEAN,
+        include_background: bool = False,
+        epsilon: float = 1e-7,
+        lambda_dice: float = 1.0,
+        lambda_focal: float = 1.0,
+    ):
+
+        super().__init__()
+        self.to_onehot_y = to_onehot_y
+        self.num_classes = num_classes
+        self.gamma = gamma
+        self.delta = delta
+        self.lambda_dice = lambda_dice
+        self.lambda_focal = lambda_focal
+
+        self.reduction = reduction
+        self.softmax = softmax
+        self.sigmoid = sigmoid
+        self.epsilon = epsilon
+
+        self.focal_tversky = FocalTverskyLoss(
+            delta=delta,
+            gamma=gamma,
+            epsilon=epsilon,
+            reduction=reduction
+        )
+        
+        self.focal = FocalLoss(
+            include_background=include_background,
+            to_onehot_y=to_onehot_y,
+            reduction=reduction,
+            use_softmax=False
+        )
+            
+    def forward(self, y_pred: torch.Tensor, y_true: torch.Tensor) -> torch.Tensor:
+
+        focal_tversky_loss = self.focal_tversky(y_pred, y_true)
+        focal_loss = self.focal(y_pred, y_true)
+        total_loss: torch.Tensor = self.lambda_dice * focal_tversky_loss + self.lambda_focal * focal_loss
+
+        return total_loss

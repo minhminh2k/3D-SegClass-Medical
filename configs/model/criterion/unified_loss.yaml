@@ -1,0 +1,13 @@
+_target_: src.models.losses.combine_loss.UnifiedFocalLoss
+
+sigmoid: True
+to_onehot_y: False
+num_classes: ${model.num_classes}
+gamma: 0.75
+delta: 0.7
+softmax: False
+reduction: "mean"
+include_background: False
+epsilon: 1e-7
+lambda_dice: 1.0
+lambda_focal: 1.0

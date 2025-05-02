@@ -22,7 +22,7 @@ class STUNet(nn.Module):
         self.input_channels = input_channels
         self.num_classes = num_classes
         
-        self.final_nonlin = lambda x:x 
+        # self.final_nonlin = lambda x:x 
         self.decoder = Decoder()
         self.decoder.deep_supervision = enable_deep_supervision
         self.upscale_logits = False
@@ -66,30 +66,49 @@ class STUNet(nn.Module):
         for ds in range(len(self.conv_blocks_localization)):
             self.seg_outputs.append(nn.Conv3d(dims[-2-ds], num_classes, kernel_size=1))
 
-        self.upscale_logits_ops = []
-        for usl in range(num_pool - 1):
-            self.upscale_logits_ops.append(lambda x: x)
-        
+        # self.upscale_logits_ops = []
+        # for usl in range(num_pool - 1):
+        #     self.upscale_logits_ops.append(lambda x: x)
+        self.upscale_logits_ops = [self.upscale_op] * (num_pool - 1)
+    
+    def upscale_op(self, x: torch.Tensor) -> torch.Tensor:
+        return x
+    
+    def final_nonlin(self, x):
+        return x
 
     def forward(self, x):
         skips = []
         seg_outputs = []
         
-        for d in range(len(self.conv_blocks_context) - 1):
-            x = self.conv_blocks_context[d](x)
-            skips.append(x)
+        # for d in range(len(self.conv_blocks_context) - 1):
+        #     x = self.conv_blocks_context[d](x)
+        #     skips.append(x)
+        
+        for idx, layer in enumerate(self.conv_blocks_context):
+            if idx < len(self.conv_blocks_context) - 1:
+                x = layer(x)
+                skips.append(x)
 
         x = self.conv_blocks_context[-1](x)
 
-        for u in range(len(self.conv_blocks_localization)):
-            x = self.upsample_layers[u](x)
-            x = torch.cat((x, skips[-(u + 1)]), dim=1) 
-            x = self.conv_blocks_localization[u](x)
-            seg_outputs.append(self.final_nonlin(self.seg_outputs[u](x)))
+        # for u in range(len(self.conv_blocks_localization)):
+        #     x = self.upsample_layers[u](x)
+        #     x = torch.cat((x, skips[-(u + 1)]), dim=1) 
+        #     x = self.conv_blocks_localization[u](x)
+        #     seg_outputs.append(self.final_nonlin(self.seg_outputs[u](x)))
+            
+        for u, (upsample, conv, seg_output) in enumerate(zip(self.upsample_layers, self.conv_blocks_localization, self.seg_outputs)):
+            x = upsample(x)
+            x = torch.cat((x, skips[-(u + 1)]), dim=1)
+            x = conv(x)
+            seg_outputs.append(self.final_nonlin(seg_output(x)))
 
         if self.decoder.deep_supervision:
+            # return tuple([seg_outputs[-1]] + [i(j) for i, j in
+            #                                   zip(list(self.upscale_logits_ops)[::-1], seg_outputs[:-1][::-1])])
             return tuple([seg_outputs[-1]] + [i(j) for i, j in
-                                              zip(list(self.upscale_logits_ops)[::-1], seg_outputs[:-1][::-1])])
+                                              zip(self.upscale_logits_ops[::-1], seg_outputs[:-1][::-1])])
         else:
             return seg_outputs[-1]
 
@@ -114,7 +133,7 @@ class BasicResBlock(nn.Module):
         y = self.conv1(x)
         y = self.act1(self.norm1(y))  
         y = self.norm2(self.conv2(y))
-        if self.conv3:
+        if self.conv3 is not None:
             x = self.conv3(x)
         y += x
         return self.act2(y)
@@ -127,7 +146,7 @@ class Upsample_Layer_nearest(nn.Module):
         self.mode = mode
         
     def forward(self, x):
-        x = nn.functional.interpolate(x, scale_factor=self.pool_op_kernel_size, mode=self.mode)
+        x = nn.functional.interpolate(x, scale_factor=[float(s) for s in self.pool_op_kernel_size], mode=self.mode)
         x = self.conv(x)
         return x
 
