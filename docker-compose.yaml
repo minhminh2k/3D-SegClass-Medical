@@ -1,0 +1,46 @@
+version: "3.8"
+
+services:
+  triton:
+    image: nvcr.io/nvidia/tritonserver:23.12-py3
+    container_name: triton_server
+    ports:
+      - "8000:8000"   # HTTP
+      - "8001:8001"   # gRPC
+      - "8002:8002"   # Metrics
+    volumes:
+      - triton-models:/models
+    networks:
+      - app-network
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+    command: ["tritonserver", "--model-repository=/models"]
+
+  # app:
+  #   build: ./src
+  #   depends_on:
+  #     - triton
+  #   networks:
+  #     - triton-net
+  #   volumes:
+  #     - ./src:/app
+  #   working_dir: /app
+  #   command: python app.py
+
+volumes:
+  triton-models:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ./triton/model_repository
+
+networks:
+  app-network:
+    driver: bridge

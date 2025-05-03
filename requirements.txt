@@ -60,8 +60,11 @@ kaggle==1.7.4.2
 
 # SAM
 git+https://github.com/facebookresearch/segment-anything.git
---upgrade git+https://github.com/FabianIsensee/hiddenlayer.git # Need to fix the pytorch builder
+git+https://github.com/FabianIsensee/hiddenlayer.git # Need to fix the pytorch builder
 git+https://github.com/ChaoningZhang/MobileSAM.git
 graphviz==0.20.3
 seaborn==0.13.2
 monailabel==0.8.5
+pyplastimatch==0.4.6
+
+tritonclient[all]

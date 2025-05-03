@@ -1,0 +1,26 @@
+name: "unetr"
+platform: "pytorch_libtorch"
+max_batch_size : 1
+input [
+  {
+    name: "input_volume"
+    data_type: TYPE_FP32
+    dims: [ 1, 128, 128, 128 ]
+  }
+]
+output [
+  {
+    name: "SEGMENTATION_OUTPUT"
+    data_type: TYPE_FP32
+    dims: [ 1, 128, 128, 128 ]
+  }
+]
+
+instance_group [
+  {
+    kind: KIND_GPU
+    count: 1
+  }
+]
+
+dynamic_batching { }

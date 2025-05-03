@@ -156,5 +156,5 @@ configs/local/default.yaml
 # checkpoints/
 # Aim logging
 .aim
-
+*.zip
 # /assets/

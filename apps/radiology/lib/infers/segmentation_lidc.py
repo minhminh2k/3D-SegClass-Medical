@@ -72,7 +72,7 @@ class SegmentationLIDC(BasicInferTask):
         return SlidingWindowInferer(
             roi_size=[128, 128, 128],
             sw_batch_size=1,
-            overlap=0.25,
+            overlap=0.4,
         )
 
     def inverse_transforms(self, data=None):
