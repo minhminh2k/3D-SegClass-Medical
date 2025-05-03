@@ -9,5 +9,9 @@ sudo apt-get install libglu1-mesa libpulse-mainloop-glib0 libnss3 libasound2 qt5
 ## Push Dcom to Orthanc
 
 ```
+# Local
 python infers/ImportDicomFiles.py localhost 8042 ./data/LIDC_Dcom/
+
+# Docker
+python infers/ImportDicomFiles.py localhost 8042 ./data/LIDC_Dcom/ orthanc orthanc
 ```

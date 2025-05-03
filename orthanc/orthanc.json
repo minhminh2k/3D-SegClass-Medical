@@ -1,0 +1,30 @@
+{
+    "Name":"orthanc",
+    "RemoteAccessAllowed":true,
+    "AuthenticationEnabled": false,
+    "Test__RegisteredUsers":{
+       "orthanc":"orthanc"
+    },
+    "StorageDirectory":"/var/lib/orthanc/db",
+    "IndexDirectory":"/var/lib/orthanc/db-index",
+    "Plugins" : [
+      "/usr/local/share/orthanc/plugins/libOrthancDicomWeb.so",
+      "/usr/local/share/orthanc/plugins/libModalityWorklists.so",
+      "/usr/local/share/orthanc/plugins/libServeFolders.so"
+    ],
+    "DicomModalities" : {
+    },
+  
+    "DicomWeb":{
+      "Enable":true,
+      "Root":"/dicom-web/",
+      "EnableWado":true,
+      "WadoRoot":"/wado",
+      "Ssl":false,
+      "QidoCaseSensitive":true,
+      "Host":"",
+      "StudiesMetadata":"Full",
+      "SeriesMetadata":"Full",
+      "PublicRoot":"/dicom-web/"
+    }
+  }

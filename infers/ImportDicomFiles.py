@@ -50,8 +50,13 @@ def UploadFile(path):
             # Authentication (for some weird reason, this method does
             # not always work)
             # http://en.wikipedia.org/wiki/Basic_access_authentication
+            
+            # Local
             headers['authorization'] = 'Basic ' + base64.b64encode(username + ':' + password)       
             
+            # Docker
+            # headers['authorization'] = 'Basic ' + base64.b64encode((username + ':' + password).encode()).decode()
+
         resp, content = h.request(URL, 'POST', 
                                   body = content,
                                   headers = headers)

@@ -1,6 +1,18 @@
 version: "3.8"
 
 services:
+  orthanc:
+    build:
+      context: ./orthanc
+    ports:
+      - 4242:4242
+      - 8042:8042
+    volumes:
+      - ./orthanc/orthanc.json:/etc/orthanc/orthanc.json
+      
+    networks:
+      - app-network
+  
   triton:
     image: nvcr.io/nvidia/tritonserver:23.12-py3
     container_name: triton_server
@@ -26,6 +38,7 @@ services:
     build: ./apps
     depends_on:
       - triton
+      - orthanc
     networks:
       - app-network
     ports:
@@ -39,9 +52,18 @@ services:
             - driver: nvidia
               count: 1
               capabilities: [gpu]
-    command: ["monailabel", "start_server", "--app", "/app/radiology", 
-              "--studies", "/app/data/LIDC/", 
+    
+    # 3D Slicer
+    # command: ["monailabel", "start_server", "--app", "/app/radiology", 
+    #           "--studies", "/app/data/LIDC/", 
+    #           "--conf", "models", "segmentation_lidc"]
+
+    # Ohif
+    command: ["monailabel", "start_server", 
+              "--app", "/app/radiology",
+              "--studies", "http://orthanc:8042/dicom-web",
               "--conf", "models", "segmentation_lidc"]
+    
 
 volumes:
   triton-models:
