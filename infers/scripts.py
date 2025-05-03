@@ -18,7 +18,7 @@ def main():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     model = LIDC_Module.load_from_checkpoint(
-        "checkpoints/epoch_000.ckpt",
+        "checkpoints/unetr.ckpt",
         net=UNETR(
             feature_size=32,
             hidden_size=768,
@@ -54,7 +54,7 @@ def main():
 
     # os.makedirs("triton/model_repository/unet/1/", exist_ok=True)
     
-    model = model.to_torchscript("test.pt")
+    model = model.to_torchscript("unetr.pt")
 
 if __name__ == "__main__":
     main()
