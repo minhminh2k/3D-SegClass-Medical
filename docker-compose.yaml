@@ -45,13 +45,13 @@ services:
       - "8003:8000"
     volumes:
       - lidc-data:/app/data/LIDC
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: 1
-              capabilities: [gpu]
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: 1
+    #           capabilities: [gpu]
     
     # 3D Slicer
     # command: ["monailabel", "start_server", "--app", "/app/radiology", 

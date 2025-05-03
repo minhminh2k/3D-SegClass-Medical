@@ -22,4 +22,5 @@ outputs = httpclient.InferRequestedOutput(
 results = client.infer(model_name="unetr", inputs=[inputs], outputs=[outputs])
 inference_output = results.as_numpy("SEGMENTATION_OUTPUT")
 
+print(type(inference_output))
 print(inference_output.shape)
