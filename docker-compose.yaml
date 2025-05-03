@@ -22,16 +22,26 @@ services:
 
     command: ["tritonserver", "--model-repository=/models"]
 
-  # app:
-  #   build: ./src
-  #   depends_on:
-  #     - triton
-  #   networks:
-  #     - triton-net
-  #   volumes:
-  #     - ./src:/app
-  #   working_dir: /app
-  #   command: python app.py
+  app:
+    build: ./apps
+    depends_on:
+      - triton
+    networks:
+      - app-network
+    ports:
+      - "8003:8000"
+    volumes:
+      - lidc-data:/app/data/LIDC
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    command: ["monailabel", "start_server", "--app", "/app/radiology", 
+              "--studies", "/app/data/LIDC/", 
+              "--conf", "models", "segmentation_lidc"]
 
 volumes:
   triton-models:
@@ -40,6 +50,13 @@ volumes:
       type: none
       o: bind
       device: ./triton/model_repository
+
+  lidc-data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ./data/LIDC
 
 networks:
   app-network:

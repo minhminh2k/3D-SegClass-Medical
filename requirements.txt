@@ -67,4 +67,5 @@ seaborn==0.13.2
 monailabel==0.8.5
 pyplastimatch==0.4.6
 
+httplib2==0.22.0
 tritonclient[all]
