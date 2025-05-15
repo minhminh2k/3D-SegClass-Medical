@@ -82,3 +82,5 @@ else:
         
 
 print("\nSummary: %d DICOM file(s) have been imported" % success)
+
+# python infers/ImportDicomFiles.py localhost 8042 ./data/LIDC_Dcom/LIDC-IDRI-0001
