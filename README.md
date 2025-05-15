@@ -88,10 +88,10 @@ You can override any parameter from command line like this
 
 ```bash
 python src/train.py trainer.max_epochs=20 data.batch_size=1
-
+```
 # Deploy with Docker and Triton Inference Server
 
 
 ## Experiment results
 - Results and Visualization: [!Wandb](https://wandb.ai/minhqd9112003/3d-segmentation)
-```
+
