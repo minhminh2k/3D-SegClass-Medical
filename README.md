@@ -16,21 +16,21 @@ ______________________________________________________________________
 
 ## Description
 
-This repository provides a comprehensive approach to 3D medical image segmentation, covering both model development and deployment. It includes:
+This repository provides a comprehensive approach to 3D medical image segmentation on the LIDC dataset (also supported: BTCV, BraTS), covering both model development and deployment. It includes:
 
 #### Model Training:
-- Training models from scratch.
-- Fine-tuning on existing models.
-- Leveraging foundation models to boost segmentation performance.
+- Training models from scratch: UNETR, SwinUNETR, nnUnet, 3D U-Net, ...
+- Fine-tuning on existing models: STU-Net, SwinUNETR pre-trained, ...
+- Leveraging foundation models to boost segmentation performance: SAM, SAM-MED3D.
  
 #### Loss Functions:
-- Implementation and evaluation of multiple loss functions specifically designed for medical image segmentation.
+- Implementation and evaluation of multiple loss functions specifically designed for medical image segmentation: BCE, Hybrid Focal, Combination Loss
 
 #### Inference and Deployment:
 - Inference pipeline designed for clinical usability.
 - Integration with 3D Slicer and OHIF Viewer.
 - Serving support via MONAI Label and Triton Inference Server for inference and visualization.
-- Docker for containerization
+- Docker for containerization.
 
 ## Installation
 
