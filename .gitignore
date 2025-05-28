@@ -158,3 +158,5 @@ configs/local/default.yaml
 .aim
 *.zip
 # /assets/
+
+*.dali
